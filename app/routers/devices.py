@@ -1,0 +1,93 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional
+
+from ..models.user import User
+from ..models.device import Device
+from ..schemas.device import Device as DeviceSchema, DeviceCreate, DeviceUpdate
+from ..database import get_db
+from ..dependencies import get_current_active_user
+
+router = APIRouter()
+
+@router.get("/", response_model=List[DeviceSchema])
+def get_devices(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get all devices with optional filtering"""
+    query = db.query(Device)
+    
+    if status:
+        query = query.filter(Device.status == status)
+    
+    devices = query.offset(skip).limit(limit).all()
+    return devices
+
+@router.post("/", response_model=DeviceSchema)
+def create_device(
+    device: DeviceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Create a new device"""
+    # Check if device_uid already exists
+    existing_device = db.query(Device).filter(Device.device_uid == device.device_uid).first()
+    if existing_device:
+        raise HTTPException(status_code=400, detail="Device UID already exists")
+    
+    db_device = Device(**device.dict())
+    db.add(db_device)
+    db.commit()
+    db.refresh(db_device)
+    return db_device
+
+@router.get("/{device_id}", response_model=DeviceSchema)
+def get_device(
+    device_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get a specific device by ID"""
+    device = db.query(Device).filter(Device.id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return device
+
+@router.put("/{device_id}", response_model=DeviceSchema)
+def update_device(
+    device_id: str,
+    device_update: DeviceUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update a device"""
+    device = db.query(Device).filter(Device.id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    update_data = device_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(device, field, value)
+    
+    db.commit()
+    db.refresh(device)
+    return device
+
+@router.delete("/{device_id}")
+def delete_device(
+    device_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Delete a device"""
+    device = db.query(Device).filter(Device.id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    db.delete(device)
+    db.commit()
+    return {"message": "Device deleted successfully"}
