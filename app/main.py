@@ -8,10 +8,10 @@ app = FastAPI(title=settings.PROJECT_NAME)
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development only
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin"],
 )
 
 # Root endpoint
@@ -26,7 +26,6 @@ async def health_check():
 
 # Import and include routers
 from .routers import auth, devices, shipments, sensor_logs, custody, legs
-from . import simple_auth
 
 app.include_router(auth.router, prefix=settings.API_V1_STR + "/auth", tags=["auth"])
 app.include_router(devices.router, prefix=settings.API_V1_STR + "/devices", tags=["devices"])
@@ -34,7 +33,8 @@ app.include_router(shipments.router, prefix=settings.API_V1_STR + "/shipments", 
 app.include_router(sensor_logs.router, prefix=settings.API_V1_STR + "/sensor-logs", tags=["sensor-logs"])
 app.include_router(custody.router, prefix=settings.API_V1_STR + "/custody", tags=["custody"])
 app.include_router(legs.router, prefix=settings.API_V1_STR + "/legs", tags=["legs"])
-app.include_router(simple_auth.router, prefix=settings.API_V1_STR + "/simple", tags=["simple-auth"])
+from .routers import debug
+app.include_router(debug.router, prefix=settings.API_V1_STR + "/debug", tags=["debug"])
 
 if __name__ == "__main__":
     import uvicorn

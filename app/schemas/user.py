@@ -21,6 +21,7 @@ class User(UserBase):
     id: str
     created_at: datetime
     is_active: bool
+    is_verified: bool
 
     @field_validator('id', mode='before')
     @classmethod

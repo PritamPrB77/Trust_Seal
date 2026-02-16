@@ -4,17 +4,19 @@ from typing import List, Optional
 
 from ..models.user import User
 from ..models.device import Device
+from ..models.enums import DeviceStatus, UserRole
 from ..schemas.device import Device as DeviceSchema, DeviceCreate, DeviceUpdate
 from ..database import get_db
-from ..dependencies import get_current_active_user
+from ..dependencies import get_current_active_user, require_roles
 
 router = APIRouter()
 
+@router.get("", response_model=List[DeviceSchema], include_in_schema=False)
 @router.get("/", response_model=List[DeviceSchema])
 def get_devices(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    status: Optional[str] = Query(None),
+    status: Optional[DeviceStatus] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -31,7 +33,7 @@ def get_devices(
 def create_device(
     device: DeviceCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.FACTORY)),
 ):
     """Create a new device"""
     # Check if device_uid already exists
@@ -62,7 +64,7 @@ def update_device(
     device_id: str,
     device_update: DeviceUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.FACTORY)),
 ):
     """Update a device"""
     device = db.query(Device).filter(Device.id == device_id).first()
@@ -81,7 +83,7 @@ def update_device(
 def delete_device(
     device_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.FACTORY)),
 ):
     """Delete a device"""
     device = db.query(Device).filter(Device.id == device_id).first()

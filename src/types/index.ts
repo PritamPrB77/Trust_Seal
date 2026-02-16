@@ -1,0 +1,107 @@
+export type UserRole = 'factory' | 'port' | 'warehouse' | 'customer' | 'admin';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  created_at: string;
+  is_active: boolean;
+  is_verified: boolean;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  role?: UserRole;
+  user_id?: string;
+}
+
+export interface RegisterPayload {
+  email: string;
+  name: string;
+  password: string;
+  role: UserRole;
+}
+
+export interface RegisterResponse {
+  user: User;
+  access_token: string;
+  token_type: string;
+  verification_token: string;
+  verification_token_expires_at: string;
+}
+
+export type DeviceStatus = 'active' | 'inactive' | 'maintenance';
+
+export interface Device {
+  id: string;
+  device_uid: string;
+  model: string;
+  firmware_version: string;
+  battery_capacity_mAh: number | null;
+  status: DeviceStatus;
+  created_at: string;
+}
+
+export type ShipmentStatus = 'created' | 'in_transit' | 'docking' | 'completed' | 'compromised';
+
+export interface Shipment {
+  id: string;
+  shipment_code: string;
+  description: string | null;
+  origin: string;
+  destination: string;
+  status: ShipmentStatus;
+  device_id: string;
+  created_at: string;
+}
+
+export type LegStatus = 'pending' | 'in_progress' | 'settled';
+
+export interface ShipmentLeg {
+  id: string;
+  shipment_id: string;
+  leg_number: number;
+  from_location: string;
+  to_location: string;
+  status: LegStatus;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface SensorLog {
+  id: string;
+  shipment_id: string;
+  temperature: number | null;
+  humidity: number | null;
+  shock: number | null;
+  light_exposure: boolean | null;
+  tilt_angle: number | null;
+  hash_value: string;
+  recorded_at: string;
+}
+
+export interface CustodyCheckpoint {
+  id: string;
+  shipment_id: string;
+  leg_id: string | null;
+  verified_by: string | null;
+  biometric_verified: boolean | null;
+  blockchain_tx_hash: string | null;
+  merkle_root_hash: string | null;
+  timestamp: string;
+}
+
+export interface ShipmentWithDetails extends Shipment {
+  device?: Device | null;
+  legs?: ShipmentLeg[];
+  sensor_logs?: SensorLog[];
+  custody_checkpoints?: CustodyCheckpoint[];
+}
+
+export interface ApiErrorPayload {
+  detail?: string;
+  message?: string;
+}
+

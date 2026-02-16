@@ -5,12 +5,14 @@ from typing import List, Optional
 from ..models.user import User
 from ..models.custody_checkpoint import CustodyCheckpoint
 from ..models.shipment import Shipment
+from ..models.enums import UserRole
 from ..schemas.custody import CustodyCheckpoint as CustodyCheckpointSchema, CustodyCheckpointCreate, CustodyCheckpointUpdate
 from ..database import get_db
-from ..dependencies import get_current_active_user
+from ..dependencies import get_current_active_user, require_roles
 
 router = APIRouter()
 
+@router.get("", response_model=List[CustodyCheckpointSchema], include_in_schema=False)
 @router.get("/", response_model=List[CustodyCheckpointSchema])
 def get_custody_checkpoints(
     skip: int = Query(0, ge=0),
@@ -36,7 +38,9 @@ def get_custody_checkpoints(
 def create_custody_checkpoint(
     checkpoint: CustodyCheckpointCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+    ),
 ):
     """Create a new custody checkpoint"""
     # Verify shipment exists
@@ -71,7 +75,9 @@ def update_custody_checkpoint(
     checkpoint_id: str,
     checkpoint_update: CustodyCheckpointUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+    ),
 ):
     """Update a custody checkpoint"""
     checkpoint = db.query(CustodyCheckpoint).filter(CustodyCheckpoint.id == checkpoint_id).first()
@@ -90,7 +96,7 @@ def update_custody_checkpoint(
 def delete_custody_checkpoint(
     checkpoint_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ):
     """Delete a custody checkpoint"""
     checkpoint = db.query(CustodyCheckpoint).filter(CustodyCheckpoint.id == checkpoint_id).first()

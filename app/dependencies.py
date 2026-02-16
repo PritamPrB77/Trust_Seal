@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from .core.config import settings
+from .models.enums import UserRole
 from .models.user import User
 from .database import SessionLocal
 
@@ -44,3 +45,15 @@ async def get_current_active_user(
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+def require_roles(*roles: UserRole):
+    async def role_dependency(current_user: User = Depends(get_current_active_user)) -> User:
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions for this operation",
+            )
+        return current_user
+
+    return role_dependency

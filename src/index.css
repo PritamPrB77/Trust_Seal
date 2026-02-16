@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-deep: #070f16;
+  --bg-layer: #0f1d2a;
+  --card: #162838;
+  --card-soft: #1b3144;
+  --text-main: #e7f3fa;
+  --text-muted: #90a8ba;
+  --accent: #13b59c;
+  --danger: #ef4444;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(18, 144, 127, 0.22), transparent 35%),
+    radial-gradient(circle at 85% 0%, rgba(24, 90, 171, 0.2), transparent 32%),
+    var(--bg-deep);
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-slate-700/60 bg-surface-700/90 shadow-panel backdrop-blur-md;
+  }
+
+  .panel-soft {
+    @apply rounded-2xl border border-slate-700/50 bg-surface-600/70 shadow-panel backdrop-blur-md;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-slate-600 bg-surface-800/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-brand-500 px-4 py-2.5 font-semibold text-slate-950 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-xl border border-slate-600 bg-surface-700 px-4 py-2.5 font-semibold text-slate-100 transition hover:border-brand-400/60 hover:text-brand-300;
+  }
+}
+

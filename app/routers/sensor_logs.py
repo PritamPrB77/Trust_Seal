@@ -5,12 +5,14 @@ from typing import List, Optional
 from ..models.user import User
 from ..models.sensor_log import SensorLog
 from ..models.shipment import Shipment
+from ..models.enums import UserRole
 from ..schemas.sensor_log import SensorLog as SensorLogSchema, SensorLogCreate
 from ..database import get_db
-from ..dependencies import get_current_active_user
+from ..dependencies import get_current_active_user, require_roles
 
 router = APIRouter()
 
+@router.get("", response_model=List[SensorLogSchema], include_in_schema=False)
 @router.get("/", response_model=List[SensorLogSchema])
 def get_sensor_logs(
     skip: int = Query(0, ge=0),
@@ -36,7 +38,9 @@ def get_sensor_logs(
 def create_sensor_log(
     log: SensorLogCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+    ),
 ):
     """Create a new sensor log"""
     # Verify shipment exists
@@ -66,7 +70,7 @@ def get_sensor_log(
 def delete_sensor_log(
     log_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ):
     """Delete a sensor log"""
     log = db.query(SensorLog).filter(SensorLog.id == log_id).first()

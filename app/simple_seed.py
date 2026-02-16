@@ -32,6 +32,12 @@ def seed_database():
         print("Creating users...")
         # Create users with simple password hash (for testing only)
         users = [
+                User(
+                    name="Administrator",
+                    email="admin@trustseal.io",
+                    password_hash="$2b$12$dummy_hash_for_testing",
+                    role=UserRole.ADMIN
+                ),
             User(
                 name="Factory Manager",
                 email="factory@trustseal.io",
@@ -187,6 +193,7 @@ def seed_database():
         print("Factory Manager: factory@trustseal.io")
         print("Warehouse Manager: warehouse@trustseal.io")
         print("Customer: customer@trustseal.io")
+            print("Administrator: admin@trustseal.io (password: pass123)")
         
     except Exception as e:
         print(f"❌ Error seeding database: {e}")

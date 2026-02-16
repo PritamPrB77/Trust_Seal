@@ -4,7 +4,14 @@ from .shipment import Shipment, ShipmentCreate, ShipmentUpdate, ShipmentWithDeta
 from .leg import ShipmentLeg, ShipmentLegCreate, ShipmentLegUpdate
 from .sensor_log import SensorLog, SensorLogCreate
 from .custody import CustodyCheckpoint, CustodyCheckpointCreate, CustodyCheckpointUpdate
-from .token import Token, TokenData, TokenPayload
+from .token import (
+    Token,
+    TokenData,
+    TokenPayload,
+    RegisterResponse,
+    VerifyTokenRequest,
+    VerifyTokenResponse,
+)
 
 __all__ = [
     "User", "UserCreate", "UserUpdate", "UserInDB",
@@ -13,5 +20,6 @@ __all__ = [
     "ShipmentLeg", "ShipmentLegCreate", "ShipmentLegUpdate",
     "SensorLog", "SensorLogCreate",
     "CustodyCheckpoint", "CustodyCheckpointCreate", "CustodyCheckpointUpdate",
-    "Token", "TokenData", "TokenPayload"
+    "Token", "TokenData", "TokenPayload",
+    "RegisterResponse", "VerifyTokenRequest", "VerifyTokenResponse"
 ]

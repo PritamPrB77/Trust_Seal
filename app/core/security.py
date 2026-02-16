@@ -1,5 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Optional
+import hashlib
+import hmac
+import secrets
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from .config import settings
@@ -18,6 +21,19 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
+    # Ensure exp is a numeric timestamp (UTC)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
+
+
+def generate_user_verification_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def hash_verification_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def verify_user_verification_token(token: str, token_hash: str) -> bool:
+    return hmac.compare_digest(hash_verification_token(token), token_hash)

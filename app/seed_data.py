@@ -34,22 +34,32 @@ def seed_database():
         # Create users
         users = [
             User(
+                name="Administrator",
+                email="admin@trustseal.io",
+                password_hash=get_password_hash("pass123"),
+                role=UserRole.ADMIN,
+                is_verified=True,
+            ),
+            User(
                 name="Factory Manager",
                 email="factory@trustseal.io",
                 password_hash=get_password_hash("pass123"),
-                role=UserRole.FACTORY
+                role=UserRole.FACTORY,
+                is_verified=True,
             ),
             User(
                 name="Warehouse Manager",
                 email="warehouse@trustseal.io",
                 password_hash=get_password_hash("pass123"),
-                role=UserRole.WAREHOUSE
+                role=UserRole.WAREHOUSE,
+                is_verified=True,
             ),
             User(
                 name="Customer",
                 email="customer@trustseal.io",
                 password_hash=get_password_hash("pass123"),
-                role=UserRole.CUSTOMER
+                role=UserRole.CUSTOMER,
+                is_verified=True,
             )
         ]
         
@@ -188,6 +198,7 @@ def seed_database():
         print("Factory Manager: factory@trustseal.io / pass123")
         print("Warehouse Manager: warehouse@trustseal.io / pass123")
         print("Customer: customer@trustseal.io / pass123")
+        print("Administrator: admin@trustseal.io / pass123")
         
     except Exception as e:
         print(f"❌ Error seeding database: {e}")

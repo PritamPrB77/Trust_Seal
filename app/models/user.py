@@ -15,6 +15,9 @@ class User(Base):
     role = Column(Enum(UserRole), nullable=False, default=UserRole.CUSTOMER)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     is_active = Column(Boolean(), default=True)
+    is_verified = Column(Boolean(), default=False, nullable=False)
+    verification_token_hash = Column(String, nullable=True, index=True)
+    verification_token_expires_at = Column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self):
         return f"<User {self.email}>"
