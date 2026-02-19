@@ -87,7 +87,7 @@ def seed_database():
             origin="Factory A, Shenzhen, China",
             destination="Warehouse B, New York, USA",
             status=ShipmentStatus.IN_TRANSIT,
-            device_id=str(device.id)
+            device_id=device.id
         )
         db.add(shipment)
         db.commit()
@@ -97,7 +97,7 @@ def seed_database():
         # Create shipment legs
         legs = [
             ShipmentLeg(
-                shipment_id=str(shipment.id),
+                shipment_id=shipment.id,
                 leg_number=1,
                 from_location="Factory A, Shenzhen, China",
                 to_location="Port of Shanghai, China",
@@ -106,7 +106,7 @@ def seed_database():
                 completed_at=datetime.utcnow() - timedelta(days=4)
             ),
             ShipmentLeg(
-                shipment_id=str(shipment.id),
+                shipment_id=shipment.id,
                 leg_number=2,
                 from_location="Port of Shanghai, China",
                 to_location="Port of New York, USA",
@@ -140,7 +140,7 @@ def seed_database():
             hash_value = f"hash_{i}_{uuid.uuid4().hex[:8]}"
             
             sensor_log = SensorLog(
-                shipment_id=str(shipment.id),
+                shipment_id=shipment.id,
                 temperature=temperature,
                 humidity=humidity,
                 shock=shock,
@@ -157,18 +157,18 @@ def seed_database():
         # Create custody checkpoints
         checkpoints = [
             CustodyCheckpoint(
-                shipment_id=str(shipment.id),
-                leg_id=str(legs[0].id),
-                verified_by=str(users[0].id),  # Factory manager
+                shipment_id=shipment.id,
+                leg_id=legs[0].id,
+                verified_by=users[0].id,  # Factory manager
                 biometric_verified=True,
                 timestamp=datetime.utcnow() - timedelta(days=5),
                 blockchain_tx_hash=f"0x{uuid.uuid4().hex[:64]}",
                 merkle_root_hash=f"merkle_{uuid.uuid4().hex[:32]}"
             ),
             CustodyCheckpoint(
-                shipment_id=str(shipment.id),
-                leg_id=str(legs[0].id),
-                verified_by=str(users[1].id),  # Warehouse manager
+                shipment_id=shipment.id,
+                leg_id=legs[0].id,
+                verified_by=users[1].id,  # Warehouse manager
                 biometric_verified=True,
                 timestamp=datetime.utcnow() - timedelta(days=4),
                 blockchain_tx_hash=f"0x{uuid.uuid4().hex[:64]}",
@@ -193,7 +193,7 @@ def seed_database():
         print("Factory Manager: factory@trustseal.io")
         print("Warehouse Manager: warehouse@trustseal.io")
         print("Customer: customer@trustseal.io")
-            print("Administrator: admin@trustseal.io (password: pass123)")
+        print("Administrator: admin@trustseal.io (password: pass123)")
         
     except Exception as e:
         print(f"❌ Error seeding database: {e}")

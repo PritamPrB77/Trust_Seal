@@ -14,12 +14,23 @@ Usage:
 """
 
 import sys
+import subprocess
 from pathlib import Path
 import uvicorn
 
 # Get the project's root directory (where this run.py file is located)
 project_root = Path(__file__).parent.absolute()
 print(f"Project root: {project_root}")
+
+# Prefer the project virtual environment automatically.
+venv_python = project_root / ".venv" / "Scripts" / "python.exe"
+current_python = Path(sys.executable).resolve()
+if venv_python.exists():
+    target_python = venv_python.resolve()
+    if current_python != target_python:
+        print(f"Switching interpreter to project venv: {target_python}")
+        result = subprocess.run([str(target_python), str(Path(__file__).resolve()), *sys.argv[1:]])
+        sys.exit(result.returncode)
 
 # Add the project root to Python's module search path
 # This ensures that 'app' can be found when importing

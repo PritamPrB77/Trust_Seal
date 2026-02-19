@@ -1,1 +1,1 @@
-from . import auth, devices, shipments, sensor_logs, custody, legs
+from . import auth, devices, shipments, sensor_logs, custody, legs, ws, chat

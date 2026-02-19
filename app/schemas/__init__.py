@@ -12,6 +12,7 @@ from .token import (
     VerifyTokenRequest,
     VerifyTokenResponse,
 )
+from .chat import ChatRequest, ChatResponse
 
 __all__ = [
     "User", "UserCreate", "UserUpdate", "UserInDB",
@@ -21,5 +22,6 @@ __all__ = [
     "SensorLog", "SensorLogCreate",
     "CustodyCheckpoint", "CustodyCheckpointCreate", "CustodyCheckpointUpdate",
     "Token", "TokenData", "TokenPayload",
-    "RegisterResponse", "VerifyTokenRequest", "VerifyTokenResponse"
+    "RegisterResponse", "VerifyTokenRequest", "VerifyTokenResponse",
+    "ChatRequest", "ChatResponse",
 ]

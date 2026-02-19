@@ -32,6 +32,10 @@ Copy `.env.example` to `.env` and adjust values.
 Required for backend:
 
 ```env
+# Optional: one full URL override (takes precedence over POSTGRES_*):
+# DATABASE_URL=sqlite:///./trustseal.db
+# DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
+
 BACKEND_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 POSTGRES_SERVER=localhost
 POSTGRES_USER=postgres
@@ -43,6 +47,8 @@ SECRET_KEY=replace-with-long-random-secret
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
 ```
+
+If you are using Supabase and your network cannot resolve/connect to `db.<project>.supabase.co` (often IPv6/DNS issues), use Supabase pooler connection string in `DATABASE_URL` (IPv4-friendly) or switch to local SQLite for development.
 
 Required for frontend:
 

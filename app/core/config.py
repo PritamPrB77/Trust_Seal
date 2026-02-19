@@ -1,9 +1,11 @@
 from pydantic_settings import BaseSettings
 from typing import Optional, List
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+ROOT_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(ROOT_DIR / ".env")
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "TrustSeal IoT"
@@ -16,6 +18,7 @@ class Settings(BaseSettings):
         "BACKEND_CORS_ORIGINS",
         "http://localhost:5173,http://127.0.0.1:5173",
     )
+    DATABASE_URL_OVERRIDE: Optional[str] = os.getenv("DATABASE_URL")
     
     # Database
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "localhost")
@@ -24,9 +27,21 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "trustseal")
     POSTGRES_PORT: Optional[int] = os.getenv("POSTGRES_PORT", 5432)
     POSTGRES_SSLMODE: Optional[str] = os.getenv("POSTGRES_SSLMODE", "prefer")
+    WS_REQUIRE_AUTH: bool = os.getenv("WS_REQUIRE_AUTH", "false").lower() == "true"
+    REALTIME_QUEUE_MAXSIZE: int = int(os.getenv("REALTIME_QUEUE_MAXSIZE", "5000"))
+
+    OPENROUTER_API_KEY: Optional[str] = os.getenv("OPENROUTER_API_KEY")
+    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-haiku")
+    OPENROUTER_TIMEOUT_SECONDS: int = int(os.getenv("OPENROUTER_TIMEOUT_SECONDS", "30"))
+    OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "512"))
+    OPENROUTER_SITE_URL: Optional[str] = os.getenv("OPENROUTER_SITE_URL")
+    OPENROUTER_APP_NAME: str = os.getenv("OPENROUTER_APP_NAME", "TrustSeal IoT")
     
     @property
     def DATABASE_URL(self) -> str:
+        if self.DATABASE_URL_OVERRIDE:
+            return self.DATABASE_URL_OVERRIDE
         if self.POSTGRES_SSLMODE == "require":
             return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}?sslmode=require"
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

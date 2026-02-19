@@ -16,6 +16,13 @@ from ..dependencies import get_current_active_user, require_roles
 router = APIRouter()
 
 
+def _parse_uuid(value: str, field_name: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(str(value))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail=f"Invalid {field_name}")
+
+
 def _to_plain(obj):
     """Simple serializer: convert UUIDs, Enums, SQLAlchemy models and
     iterables into plain Python types suitable for JSON responses.
@@ -50,7 +57,7 @@ def _to_plain(obj):
 def get_shipment_legs(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    shipment_id: Optional[str] = Query(None),
+    shipment_id: Optional[uuid.UUID] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -76,20 +83,24 @@ def create_shipment_leg(
     ),
 ):
     """Create a new shipment leg"""
+    shipment_uuid = _parse_uuid(leg.shipment_id, "shipment_id")
+
     # Verify shipment exists
-    shipment = db.query(Shipment).filter(Shipment.id == leg.shipment_id).first()
+    shipment = db.query(Shipment).filter(Shipment.id == shipment_uuid).first()
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
     
     # Check if leg number already exists for this shipment
     existing_leg = db.query(ShipmentLeg).filter(
-        ShipmentLeg.shipment_id == leg.shipment_id,
+        ShipmentLeg.shipment_id == shipment_uuid,
         ShipmentLeg.leg_number == leg.leg_number
     ).first()
     if existing_leg:
         raise HTTPException(status_code=400, detail="Leg number already exists for this shipment")
     
-    db_leg = ShipmentLeg(**leg.dict())
+    payload = leg.dict()
+    payload["shipment_id"] = shipment_uuid
+    db_leg = ShipmentLeg(**payload)
     db.add(db_leg)
     db.commit()
     db.refresh(db_leg)
@@ -97,7 +108,7 @@ def create_shipment_leg(
 
 @router.get("/{leg_id}", response_model=ShipmentLegSchema)
 def get_shipment_leg(
-    leg_id: str,
+    leg_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -109,7 +120,7 @@ def get_shipment_leg(
 
 @router.put("/{leg_id}", response_model=ShipmentLegSchema)
 def update_shipment_leg(
-    leg_id: str,
+    leg_id: uuid.UUID,
     leg_update: ShipmentLegUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
@@ -131,7 +142,7 @@ def update_shipment_leg(
 
 @router.post("/{leg_id}/start")
 def start_shipment_leg(
-    leg_id: str,
+    leg_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
@@ -150,7 +161,7 @@ def start_shipment_leg(
 
 @router.post("/{leg_id}/complete")
 def complete_shipment_leg(
-    leg_id: str,
+    leg_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
@@ -169,7 +180,7 @@ def complete_shipment_leg(
 
 @router.delete("/{leg_id}")
 def delete_shipment_leg(
-    leg_id: str,
+    leg_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)

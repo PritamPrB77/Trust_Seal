@@ -105,3 +105,10 @@ export interface ApiErrorPayload {
   message?: string;
 }
 
+export type ChatConfidence = 'high' | 'medium' | 'low';
+
+export interface ChatResponse {
+  answer: string;
+  sources: string[];
+  confidence: ChatConfidence;
+}

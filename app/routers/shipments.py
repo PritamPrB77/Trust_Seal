@@ -16,8 +16,16 @@ import uuid
 from collections.abc import Iterable
 import enum as _enum
 from ..dependencies import get_current_active_user, require_roles
+from ..services.realtime import build_realtime_event, shipment_event_dispatcher
 
 router = APIRouter()
+
+
+def _parse_uuid(value: str, field_name: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(str(value))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail=f"Invalid {field_name}")
 
 @router.get("", response_model=List[ShipmentSchema], include_in_schema=False)
 @router.get("/", response_model=List[ShipmentSchema])
@@ -25,7 +33,7 @@ def get_shipments(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     status: Optional[ShipmentStatus] = Query(None),
-    device_id: Optional[str] = Query(None),
+    device_id: Optional[uuid.UUID] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -75,11 +83,15 @@ def create_shipment(
     if existing_shipment:
         raise HTTPException(status_code=400, detail="Shipment code already exists")
 
-    device = db.query(Device).filter(Device.id == shipment.device_id).first()
+    device_uuid = _parse_uuid(shipment.device_id, "device_id")
+
+    device = db.query(Device).filter(Device.id == device_uuid).first()
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
-    
-    db_shipment = Shipment(**shipment.dict())
+
+    payload = shipment.dict()
+    payload["device_id"] = device_uuid
+    db_shipment = Shipment(**payload)
     db.add(db_shipment)
     db.commit()
     db.refresh(db_shipment)
@@ -87,7 +99,7 @@ def create_shipment(
 
 @router.get("/{shipment_id}", response_model=ShipmentWithDetails)
 def get_shipment(
-    shipment_id: str,
+    shipment_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -99,7 +111,7 @@ def get_shipment(
 
 @router.put("/{shipment_id}", response_model=ShipmentSchema)
 def update_shipment(
-    shipment_id: str,
+    shipment_id: uuid.UUID,
     shipment_update: ShipmentUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
@@ -111,17 +123,36 @@ def update_shipment(
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
     
+    previous_status = shipment.status
     update_data = shipment_update.dict(exclude_unset=True)
+    if "device_id" in update_data and update_data["device_id"] is not None:
+        update_data["device_id"] = _parse_uuid(update_data["device_id"], "device_id")
     for field, value in update_data.items():
         setattr(shipment, field, value)
     
     db.commit()
     db.refresh(shipment)
+
+    if previous_status != shipment.status:
+        shipment_payload = ShipmentSchema.model_validate(_to_plain(shipment)).model_dump(mode="json")
+        shipment_event_dispatcher.publish(
+            str(shipment_id),
+            build_realtime_event(
+                event="shipment.status_changed",
+                shipment_id=str(shipment_id),
+                data={
+                    "previous_status": previous_status.value,
+                    "current_status": shipment.status.value,
+                    "shipment": shipment_payload,
+                },
+            ),
+        )
+
     return _to_plain(shipment)
 
 @router.post("/{shipment_id}/logs", response_model=List[SensorLogSchema])
 def add_sensor_logs(
-    shipment_id: str,
+    shipment_id: uuid.UUID,
     logs: List[SensorLogCreate],
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -135,20 +166,32 @@ def add_sensor_logs(
     # Create sensor logs
     db_logs = []
     for log_data in logs:
-        log_data.shipment_id = shipment_id
-        db_log = SensorLog(**log_data.dict())
+        log_payload = log_data.dict()
+        log_payload["shipment_id"] = shipment_id
+        db_log = SensorLog(**log_payload)
         db.add(db_log)
         db_logs.append(db_log)
     
     db.commit()
+    serialized_logs = []
     for db_log in db_logs:
         db.refresh(db_log)
+        log_payload = SensorLogSchema.model_validate(_to_plain(db_log)).model_dump(mode="json")
+        serialized_logs.append(log_payload)
+        shipment_event_dispatcher.publish(
+            str(shipment_id),
+            build_realtime_event(
+                event="sensor_log.created",
+                shipment_id=str(shipment_id),
+                data={"log": log_payload},
+            ),
+        )
 
-    return [_to_plain(l) for l in db_logs]
+    return serialized_logs
 
 @router.get("/{shipment_id}/logs", response_model=List[SensorLogSchema])
 def get_sensor_logs(
-    shipment_id: str,
+    shipment_id: uuid.UUID,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
@@ -165,7 +208,7 @@ def get_sensor_logs(
 
 @router.post("/{shipment_id}/settle")
 def settle_shipment(
-    shipment_id: str,
+    shipment_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
@@ -176,6 +219,7 @@ def settle_shipment(
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
     
+    previous_status = shipment.status
     shipment.status = ShipmentStatus.COMPLETED
     
     # Complete all pending legs
@@ -189,6 +233,33 @@ def settle_shipment(
         leg.completed_at = datetime.now(timezone.utc)
     
     db.commit()
+
+    if previous_status != ShipmentStatus.COMPLETED:
+        shipment_event_dispatcher.publish(
+            str(shipment_id),
+            build_realtime_event(
+                event="shipment.status_changed",
+                shipment_id=str(shipment_id),
+                data={
+                    "previous_status": previous_status.value,
+                    "current_status": ShipmentStatus.COMPLETED.value,
+                },
+            ),
+        )
+
+    shipment_event_dispatcher.publish(
+        str(shipment_id),
+        build_realtime_event(
+            event="shipment.settled",
+            shipment_id=str(shipment_id),
+            data={
+                "status": ShipmentStatus.COMPLETED.value,
+                "settled_leg_ids": [str(leg.id) for leg in pending_legs],
+                "settled_leg_count": len(pending_legs),
+            },
+        ),
+    )
+
     return {"message": "Shipment settled successfully"}
 
 

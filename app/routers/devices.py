@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import uuid
 
 from ..models.user import User
 from ..models.device import Device
@@ -49,7 +50,7 @@ def create_device(
 
 @router.get("/{device_id}", response_model=DeviceSchema)
 def get_device(
-    device_id: str,
+    device_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -61,7 +62,7 @@ def get_device(
 
 @router.put("/{device_id}", response_model=DeviceSchema)
 def update_device(
-    device_id: str,
+    device_id: uuid.UUID,
     device_update: DeviceUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.FACTORY)),
@@ -81,7 +82,7 @@ def update_device(
 
 @router.delete("/{device_id}")
 def delete_device(
-    device_id: str,
+    device_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.FACTORY)),
 ):
