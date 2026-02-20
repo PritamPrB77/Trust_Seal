@@ -16,18 +16,21 @@ Full-stack supply chain IoT monitoring system.
 
 ```text
 TrustSeal/
-|- app/                     # FastAPI backend
-|- alembic/                 # Migrations
-|- src/                     # React frontend
-|- package.json             # Frontend dependencies/scripts
-|- requirements.txt         # Backend dependencies
-|- .env.example             # Example environment variables
-|- run.py                   # Backend entry helper
+|- frontend/                # React frontend
+|  |- src/
+|  |- package.json
+|  |- .env.example
+|- backend/                 # FastAPI backend
+|  |- app/
+|  |- alembic/
+|  |- requirements.txt
+|  |- run.py
+|  |- .env.example
 ```
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and adjust values.
+Copy `backend/.env.example` to `backend/.env`, and copy `frontend/.env.example` to `frontend/.env`.
 
 Required for backend:
 
@@ -60,6 +63,7 @@ VITE_API_BASE_URL=http://localhost:8000
 
 1. Create virtual environment and install dependencies.
 ```bash
+cd backend
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
@@ -83,6 +87,7 @@ Backend runs at `http://localhost:8000`.
 
 1. Install dependencies.
 ```bash
+cd frontend
 npm install
 ```
 2. Start dev server.
@@ -98,8 +103,8 @@ Frontend default dev URL is `http://localhost:5173`.
 
 Quick frontend tips:
 
-- Copy `.env.example` to `.env` at repository root to set `VITE_API_BASE_URL`.
-- After backend is running at `http://localhost:8000`, start the frontend with `npm run dev`.
+- Copy `frontend/.env.example` to `frontend/.env` to set `VITE_API_BASE_URL`.
+- After backend is running at `http://localhost:8000`, start the frontend with `cd frontend` then `npm run dev`.
 
 Admin login example
 -------------------
@@ -159,7 +164,7 @@ Shipment details:
 
 ## CORS and Preflight
 
-Backend CORS is configured in `app/main.py` using `CORSMiddleware`:
+Backend CORS is configured in `backend/app/main.py` using `CORSMiddleware`:
 
 - `allow_origins`: from `BACKEND_CORS_ORIGINS`
 - `allow_methods`: `GET, POST, PUT, DELETE, OPTIONS`
@@ -195,7 +200,7 @@ Preflight behavior:
 `AttributeError: module 'bcrypt' has no attribute '__about__'`:
 
 - Caused by incompatible `bcrypt` with `passlib 1.7.4`.
-- Use pinned dependency from `requirements.txt` (`bcrypt>=4.0.1,<4.1`).
+- Use pinned dependency from `backend/requirements.txt` (`bcrypt>=4.0.1,<4.1`).
 - Reinstall backend deps and restart server.
 
 No data on device shipments:
