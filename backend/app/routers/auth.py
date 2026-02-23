@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from datetime import timedelta
 from datetime import datetime, timezone
+import logging
 
 from ..core import security
 from ..core.config import settings
@@ -13,36 +15,48 @@ from ..database import get_db
 from ..dependencies import get_current_user
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _raise_db_unavailable() -> None:
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Database unavailable. Check Supabase connection and credentials.",
+    )
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
-    db_user = db.query(User).filter(User.email == user.email).first()
-    if db_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+    try:
+        db_user = db.query(User).filter(User.email == user.email).first()
+        if db_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+
+        hashed_password = security.get_password_hash(user.password)
+        verification_token = security.generate_user_verification_token()
+        verification_token_hash = security.hash_verification_token(verification_token)
+        verification_token_expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.VERIFICATION_TOKEN_EXPIRE_MINUTES
         )
 
-    hashed_password = security.get_password_hash(user.password)
-    verification_token = security.generate_user_verification_token()
-    verification_token_hash = security.hash_verification_token(verification_token)
-    verification_token_expires_at = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.VERIFICATION_TOKEN_EXPIRE_MINUTES
-    )
-
-    db_user = User(
-        email=user.email,
-        name=user.name,
-        password_hash=hashed_password,
-        role=user.role,
-        verification_token_hash=verification_token_hash,
-        verification_token_expires_at=verification_token_expires_at,
-        is_verified=False,
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+        db_user = User(
+            email=user.email,
+            name=user.name,
+            password_hash=hashed_password,
+            role=user.role,
+            verification_token_hash=verification_token_hash,
+            verification_token_expires_at=verification_token_expires_at,
+            is_verified=False,
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+    except SQLAlchemyError:
+        logger.exception("Database error during user registration")
+        _raise_db_unavailable()
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
@@ -64,7 +78,12 @@ def login_for_access_token(
     db: Session = Depends(get_db)
 ):
     """Authenticate user and return access token"""
-    user = db.query(User).filter(User.email == form_data.username).first()
+    try:
+        user = db.query(User).filter(User.email == form_data.username).first()
+    except SQLAlchemyError:
+        logger.exception("Database error during login")
+        _raise_db_unavailable()
+
     if not user or not security.verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

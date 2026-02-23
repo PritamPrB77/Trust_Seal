@@ -5,6 +5,11 @@ export function getErrorMessage(error: unknown, fallback = 'Something went wrong
   const axiosError = error as AxiosError<ApiErrorPayload> | undefined;
   const detail = axiosError?.response?.data?.detail;
   const message = axiosError?.response?.data?.message;
+  const axiosMessage = axiosError?.message;
+
+  if (axiosError?.code === 'ECONNABORTED') {
+    return 'Request timed out. Backend is slow or unreachable. Please retry.';
+  }
 
   if (typeof detail === 'string' && detail.trim().length > 0) {
     return detail;
@@ -14,10 +19,13 @@ export function getErrorMessage(error: unknown, fallback = 'Something went wrong
     return message;
   }
 
+  if (typeof axiosMessage === 'string' && axiosMessage.trim().length > 0) {
+    return axiosMessage;
+  }
+
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
   }
 
   return fallback;
 }
-

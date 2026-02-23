@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import uuid
+import logging
 
 from ..models.user import User
 from ..models.device import Device
@@ -9,8 +10,17 @@ from ..models.enums import DeviceStatus, UserRole
 from ..schemas.device import Device as DeviceSchema, DeviceCreate, DeviceUpdate
 from ..database import get_db
 from ..dependencies import get_current_active_user, require_roles
+from ..services.chat_service import chat_service
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _refresh_rag_index(db: Session) -> None:
+    try:
+        chat_service.refresh_index(db)
+    except Exception as exc:
+        logger.warning("RAG index refresh skipped after device mutation: %s", exc)
 
 @router.get("", response_model=List[DeviceSchema], include_in_schema=False)
 @router.get("/", response_model=List[DeviceSchema])
@@ -46,6 +56,7 @@ def create_device(
     db.add(db_device)
     db.commit()
     db.refresh(db_device)
+    _refresh_rag_index(db)
     return db_device
 
 @router.get("/{device_id}", response_model=DeviceSchema)
@@ -78,6 +89,7 @@ def update_device(
     
     db.commit()
     db.refresh(device)
+    _refresh_rag_index(db)
     return device
 
 @router.delete("/{device_id}")
@@ -93,4 +105,5 @@ def delete_device(
     
     db.delete(device)
     db.commit()
+    _refresh_rag_index(db)
     return {"message": "Device deleted successfully"}

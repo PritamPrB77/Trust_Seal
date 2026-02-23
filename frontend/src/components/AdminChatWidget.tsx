@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { sendAdminChat } from '@/api/chat';
 import { useAuth } from '@/hooks/useAuth';
 import type { ChatResponse } from '@/types';
@@ -26,6 +27,7 @@ function makeMessageId() {
 
 function AdminChatWidget() {
   const { user } = useAuth();
+  const location = useLocation();
   const isAdmin = user?.role === 'admin';
 
   const [isOpen, setIsOpen] = useState(false);
@@ -42,6 +44,10 @@ function AdminChatWidget() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const quickPrompts = useMemo(() => QUICK_PROMPTS, []);
+  const activeShipmentId = useMemo(() => {
+    const match = location.pathname.match(/^\/shipment\/([^/?#]+)/i);
+    return match?.[1] ?? undefined;
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -69,7 +75,7 @@ function AdminChatWidget() {
     setIsSending(true);
 
     try {
-      const response = await sendAdminChat(trimmed);
+      const response = await sendAdminChat(trimmed, activeShipmentId);
       setMessages((prev) => [
         ...prev,
         {

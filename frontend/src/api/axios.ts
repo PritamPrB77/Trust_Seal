@@ -1,11 +1,23 @@
 import axios from 'axios';
 import { clearStoredToken, getStoredToken, isTokenExpired } from '@/utils/token';
 
-const fallbackApiBase = 'http://localhost:8000';
+const fallbackApiBase = 'https://trust-seal.onrender.com';
+const fallbackTimeoutMs = 120_000;
+
+function normalizeLocalApiBase(value: string): string {
+  let output = value.trim();
+  output = output.replace('http://localhost:8000', 'http://127.0.0.1:8001');
+  output = output.replace('http://127.0.0.1:8000', 'http://127.0.0.1:8001');
+  return output;
+}
+
+function isLocal8000(value: string): boolean {
+  return value.includes('localhost:8000') || value.includes('127.0.0.1:8000');
+}
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || fallbackApiBase,
-  timeout: 20_000,
+  baseURL: normalizeLocalApiBase(String(import.meta.env.VITE_API_BASE_URL || fallbackApiBase)),
+  timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || fallbackTimeoutMs),
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -33,6 +45,24 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Local dev safety net: if stale port 8000 instance returns DB-unavailable, retry once on 8001.
+    const originalConfig = error?.config as ({ _retryOnLocalFailover?: boolean; baseURL?: string } | undefined);
+    const currentBase = String(originalConfig?.baseURL || apiClient.defaults.baseURL || '');
+    const detail = String(error?.response?.data?.detail || '');
+    if (
+      error?.response?.status === 503 &&
+      detail.includes('Database unavailable') &&
+      originalConfig &&
+      !originalConfig._retryOnLocalFailover &&
+      isLocal8000(currentBase)
+    ) {
+      const failoverBase = normalizeLocalApiBase(currentBase);
+      originalConfig._retryOnLocalFailover = true;
+      originalConfig.baseURL = failoverBase;
+      apiClient.defaults.baseURL = failoverBase;
+      return apiClient.request(originalConfig);
+    }
+
     if (error.response?.status === 401) {
       clearStoredToken();
       window.dispatchEvent(new CustomEvent('trustseal:unauthorized'));
@@ -40,4 +70,3 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-

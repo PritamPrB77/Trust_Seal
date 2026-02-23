@@ -13,6 +13,16 @@ from .token import (
     VerifyTokenResponse,
 )
 from .chat import ChatRequest, ChatResponse
+from .soc_agent import (
+    DeviceLogEntry,
+    HistoricalIncident,
+    HistoricalMemoryMatch,
+    InvestigationAuditListResponse,
+    InvestigationAuditRecord,
+    RootCauseHypothesis,
+    SocAssistRequest,
+    SocInvestigationResponse,
+)
 
 __all__ = [
     "User", "UserCreate", "UserUpdate", "UserInDB",
@@ -24,4 +34,7 @@ __all__ = [
     "Token", "TokenData", "TokenPayload",
     "RegisterResponse", "VerifyTokenRequest", "VerifyTokenResponse",
     "ChatRequest", "ChatResponse",
+    "DeviceLogEntry", "RootCauseHypothesis", "HistoricalIncident",
+    "HistoricalMemoryMatch", "InvestigationAuditRecord", "InvestigationAuditListResponse",
+    "SocAssistRequest", "SocInvestigationResponse",
 ]

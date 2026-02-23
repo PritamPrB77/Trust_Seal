@@ -22,7 +22,7 @@ def admin_chat(
     current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ) -> ChatResponse:
     try:
-        return chat_service.answer_question(payload.message, db)
+        return chat_service.answer_question(payload.message, db, shipment_id=payload.shipment_id)
     except ChatConfigurationError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except ChatProviderError as exc:

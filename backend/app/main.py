@@ -46,7 +46,7 @@ async def health_check():
     return {"status": "ok"}
 
 # Import and include routers
-from .routers import auth, devices, shipments, sensor_logs, custody, legs, ws, chat
+from .routers import auth, devices, shipments, sensor_logs, custody, legs, ws, chat, soc_agent
 
 app.include_router(auth.router, prefix=settings.API_V1_STR + "/auth", tags=["auth"])
 app.include_router(devices.router, prefix=settings.API_V1_STR + "/devices", tags=["devices"])
@@ -56,6 +56,7 @@ app.include_router(custody.router, prefix=settings.API_V1_STR + "/custody", tags
 app.include_router(legs.router, prefix=settings.API_V1_STR + "/legs", tags=["legs"])
 app.include_router(ws.router, prefix=settings.API_V1_STR + "/ws", tags=["ws"])
 app.include_router(chat.router, prefix=settings.API_V1_STR, tags=["chat"])
+app.include_router(soc_agent.router, prefix=settings.API_V1_STR, tags=["soc-agent"])
 from .routers import debug
 app.include_router(debug.router, prefix=settings.API_V1_STR + "/debug", tags=["debug"])
 
