@@ -1,4 +1,4 @@
-export type UserRole = 'factory' | 'port' | 'warehouse' | 'customer' | 'admin';
+export type UserRole = 'factory' | 'port' | 'warehouse' | 'customer' | 'admin' | 'authority';
 
 export interface User {
   id: string;
@@ -44,6 +44,21 @@ export interface Device {
   created_at: string;
 }
 
+export interface DeviceCreatePayload {
+  device_uid: string;
+  model: string;
+  firmware_version: string;
+  battery_capacity_mAh: number | null;
+  status: DeviceStatus;
+}
+
+export interface DeviceUpdatePayload {
+  model?: string;
+  firmware_version?: string;
+  battery_capacity_mAh?: number | null;
+  status?: DeviceStatus;
+}
+
 export type ShipmentStatus = 'created' | 'in_transit' | 'docking' | 'completed' | 'compromised';
 
 export interface Shipment {
@@ -57,6 +72,22 @@ export interface Shipment {
   created_at: string;
 }
 
+export interface ShipmentCreatePayload {
+  shipment_code: string;
+  description: string | null;
+  origin: string;
+  destination: string;
+  device_id: string;
+}
+
+export interface ShipmentUpdatePayload {
+  description?: string | null;
+  origin?: string;
+  destination?: string;
+  status?: ShipmentStatus;
+  device_id?: string;
+}
+
 export type LegStatus = 'pending' | 'in_progress' | 'settled';
 
 export interface ShipmentLeg {
@@ -68,6 +99,13 @@ export interface ShipmentLeg {
   status: LegStatus;
   started_at: string | null;
   completed_at: string | null;
+}
+
+export interface ShipmentLegCreatePayload {
+  shipment_id: string;
+  leg_number: number;
+  from_location: string;
+  to_location: string;
 }
 
 export interface SensorLog {
@@ -91,6 +129,14 @@ export interface CustodyCheckpoint {
   blockchain_tx_hash: string | null;
   merkle_root_hash: string | null;
   timestamp: string;
+}
+
+export interface CustodyCheckpointCreatePayload {
+  shipment_id: string;
+  leg_id: string | null;
+  biometric_verified: boolean;
+  blockchain_tx_hash: string | null;
+  merkle_root_hash: string | null;
 }
 
 export interface ShipmentWithDetails extends Shipment {

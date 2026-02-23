@@ -96,7 +96,7 @@ function QRLookupPage() {
           <button
             type="button"
             className="btn-primary mt-5"
-            onClick={() => navigate(`/shipment/${result.id}`)}
+            onClick={() => navigate(`/shipments/${result.id}`)}
           >
             Open Shipment Dashboard
           </button>

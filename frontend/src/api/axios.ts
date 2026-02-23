@@ -67,6 +67,15 @@ apiClient.interceptors.response.use(
       clearStoredToken();
       window.dispatchEvent(new CustomEvent('trustseal:unauthorized'));
     }
+
+    if (error.response?.status === 403) {
+      const detail = error?.response?.data?.detail;
+      const message =
+        typeof detail === 'string' && detail.trim().length > 0
+          ? detail
+          : 'Insufficient permissions for this operation.';
+      window.dispatchEvent(new CustomEvent('trustseal:forbidden', { detail: message }));
+    }
     return Promise.reject(error);
   },
 );

@@ -1,6 +1,11 @@
 import type { AxiosError } from 'axios';
 import type { ApiErrorPayload } from '@/types';
 
+export function getHttpStatus(error: unknown): number | undefined {
+  const axiosError = error as AxiosError<ApiErrorPayload> | undefined;
+  return axiosError?.response?.status;
+}
+
 export function getErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
   const axiosError = error as AxiosError<ApiErrorPayload> | undefined;
   const detail = axiosError?.response?.data?.detail;

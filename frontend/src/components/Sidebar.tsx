@@ -5,6 +5,8 @@ import { getStatusLabel } from '@/utils/status';
 
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/devices', label: 'Devices' },
+  { to: '/shipments', label: 'Shipments' },
   { to: '/lookup', label: 'QR Lookup' },
 ];
 

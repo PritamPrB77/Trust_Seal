@@ -5,7 +5,7 @@ import type { RegisterResponse, UserRole } from '@/types';
 import { formatDateTime } from '@/utils/format';
 import { getErrorMessage } from '@/utils/errors';
 
-const roleOptions: UserRole[] = ['customer', 'factory', 'port', 'warehouse', 'admin'];
+const roleOptions: UserRole[] = ['customer', 'factory', 'port', 'warehouse', 'admin', 'authority'];
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -161,4 +161,3 @@ function RegisterPage() {
 }
 
 export default RegisterPage;
-

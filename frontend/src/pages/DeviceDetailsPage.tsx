@@ -122,7 +122,7 @@ function DeviceDetailsPage() {
                     <button
                       type="button"
                       className="btn-primary"
-                      onClick={() => navigate(`/shipment/${shipment.id}`)}
+                      onClick={() => navigate(`/shipments/${shipment.id}`)}
                     >
                       Open
                     </button>
@@ -138,4 +138,3 @@ function DeviceDetailsPage() {
 }
 
 export default DeviceDetailsPage;
-

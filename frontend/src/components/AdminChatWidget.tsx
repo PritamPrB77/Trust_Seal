@@ -45,7 +45,7 @@ function AdminChatWidget() {
 
   const quickPrompts = useMemo(() => QUICK_PROMPTS, []);
   const activeShipmentId = useMemo(() => {
-    const match = location.pathname.match(/^\/shipment\/([^/?#]+)/i);
+    const match = location.pathname.match(/^\/shipments?\/([^/?#]+)/i);
     return match?.[1] ?? undefined;
   }, [location.pathname]);
 
