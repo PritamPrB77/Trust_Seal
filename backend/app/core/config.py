@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     VERIFICATION_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("VERIFICATION_TOKEN_EXPIRE_MINUTES", "60"))
     BACKEND_CORS_ORIGINS: str = os.getenv(
         "BACKEND_CORS_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173",
+        "http://localhost:5173,http://127.0.0.1:5173,https://trust-seal-tawny.vercel.app/",
     )
     DATABASE_URL_OVERRIDE: Optional[str] = os.getenv("DATABASE_URL")
     
