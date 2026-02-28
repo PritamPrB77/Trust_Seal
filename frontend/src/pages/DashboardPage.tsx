@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Activity, Battery, Radio, Shield } from 'lucide-react';
 import {
   Area,
@@ -13,6 +15,8 @@ import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
 import { useDevices } from '@/hooks/useDevices';
+import { useShipments } from '@/hooks/useShipments';
+import type { Shipment } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 
 const UPTIME_DATA = Array.from({ length: 10 }).map((_, index) => ({
@@ -20,9 +24,19 @@ const UPTIME_DATA = Array.from({ length: 10 }).map((_, index) => ({
   value: 92 + Math.sin(index / 1.4) * 3 + (index % 2),
 }));
 
+function buildShipmentCountMap(shipments: Shipment[] | undefined): Map<string, number> {
+  return (shipments ?? []).reduce((map, shipment) => {
+    const currentCount = map.get(shipment.device_id) ?? 0;
+    map.set(shipment.device_id, currentCount + 1);
+    return map;
+  }, new Map<string, number>());
+}
+
 function DashboardPage() {
   const navigate = useNavigate();
   const { data: devices, isLoading, isError, error, refetch } = useDevices();
+  const { data: shipments } = useShipments();
+  const shipmentCountByDevice = useMemo(() => buildShipmentCountMap(shipments), [shipments]);
 
   if (isLoading) {
     return <LoadingState message="Loading IoT devices..." />;
@@ -89,11 +103,21 @@ function DashboardPage() {
                 <XAxis dataKey="t" hide />
                 <YAxis hide domain={[80, 100]} />
                 <RechartsTooltip
-                  contentStyle={{ background: '#0b1220', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}
+                  contentStyle={{
+                    background: '#0b1220',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 12,
+                  }}
                   labelStyle={{ color: '#cbd5f5' }}
                   formatter={(value: number) => `${value.toFixed(1)} %`}
                 />
-                <Area type="monotone" dataKey="value" stroke="#22d3ee" strokeWidth={2} fill="url(#uptimeGradient)" />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#22d3ee"
+                  strokeWidth={2}
+                  fill="url(#uptimeGradient)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -109,8 +133,8 @@ function DashboardPage() {
             </div>
           </div>
           <p className="mt-3 text-sm text-slate-300">
-            Live IoT streams, blockchain custody, anomaly detection, and AI summaries are running within SLA. Red pulses
-            will only appear for critical events.
+            Live IoT streams, blockchain custody, anomaly detection, and AI summaries are within SLA.
+            Critical states will pulse red automatically.
           </p>
         </div>
       </section>
@@ -118,7 +142,7 @@ function DashboardPage() {
       <section className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold text-slate-100">Device Fleet</h2>
-          <p className="text-sm text-slate-400">Select a device to inspect linked shipments.</p>
+          <p className="text-sm text-slate-400">Overview cards for operational visibility across your device fleet.</p>
         </div>
 
         {totalDevices === 0 ? (
@@ -127,11 +151,28 @@ function DashboardPage() {
             description="No registered IoT devices are available for your account yet."
           />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.06 },
+              },
+            }}
+            className="grid gap-4 xl:grid-cols-2"
+          >
             {devices?.map((device) => (
-              <DeviceCard key={device.id} device={device} onOpen={(id) => navigate(`/device/${id}`)} />
+              <motion.div key={device.id} variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}>
+                <DeviceCard
+                  device={device}
+                  linkedShipmentCount={shipmentCountByDevice.get(device.id) ?? 0}
+                  onOpen={(id) => navigate(`/devices/${id}`)}
+                />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </section>
     </div>

@@ -1,45 +1,130 @@
+import { motion } from 'framer-motion';
+import { BatteryMedium, Radio, ShieldAlert, ShieldCheck, ShieldX } from 'lucide-react';
 import type { Device } from '@/types';
-import StatusBadge from '@/components/StatusBadge';
+import { buildDeviceOverview } from '@/utils/device-intelligence';
 
 interface DeviceCardProps {
   device: Device;
   onOpen: (id: string) => void;
+  linkedShipmentCount?: number;
+  onEdit?: (device: Device) => void;
+  onDelete?: (device: Device) => void;
+  deleting?: boolean;
 }
 
-function DeviceCard({ device, onOpen }: DeviceCardProps) {
+function getStatusVisual(status: ReturnType<typeof buildDeviceOverview>['operationalStatus']) {
+  if (status === 'active') {
+    return {
+      label: 'Active',
+      dot: 'bg-emerald-300',
+      badge: 'border-emerald-300/40 bg-emerald-400/15 text-emerald-100',
+      edge: 'from-emerald-300/90 to-cyan-300/70',
+      icon: ShieldCheck,
+    };
+  }
+
+  if (status === 'warning') {
+    return {
+      label: 'Warning',
+      dot: 'bg-amber-300',
+      badge: 'border-amber-300/45 bg-amber-400/15 text-amber-100',
+      edge: 'from-amber-300/90 to-orange-300/65',
+      icon: ShieldAlert,
+    };
+  }
+
+  return {
+    label: 'Offline',
+    dot: 'bg-slate-300',
+    badge: 'border-slate-300/45 bg-slate-400/15 text-slate-200',
+    edge: 'from-slate-400/80 to-slate-300/40',
+    icon: ShieldX,
+  };
+}
+
+function DeviceCard({
+  device,
+  onOpen,
+  linkedShipmentCount = 0,
+  onEdit,
+  onDelete,
+  deleting,
+}: DeviceCardProps) {
+  const overview = buildDeviceOverview(device);
+  const statusVisual = getStatusVisual(overview.operationalStatus);
+  const StatusIcon = statusVisual.icon;
+
   return (
-    <article className="panel animate-fade-up p-5">
-      <div className="flex items-start justify-between gap-3">
+    <motion.article
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
+      className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(140deg,rgba(20,39,61,0.9),rgba(14,26,43,0.9))] p-5 shadow-[0_22px_50px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+    >
+      <div className={`absolute left-0 top-0 h-full w-[3px] bg-gradient-to-b ${statusVisual.edge}`} />
+      <div className="pointer-events-none absolute -right-12 top-[-65px] h-40 w-40 rounded-full bg-cyan-300/10 blur-3xl" />
+
+      <div className="relative flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Device UID</p>
-          <h3 className="mt-1 text-lg font-semibold text-slate-100">{device.device_uid}</h3>
+          <h3 className="text-2xl font-semibold text-slate-100">{device.model}</h3>
+          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">{device.device_uid}</p>
         </div>
-        <StatusBadge kind="device" status={device.status} />
+
+        <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusVisual.badge}`}>
+          <span className={`h-2 w-2 animate-pulse rounded-full ${statusVisual.dot}`} />
+          {statusVisual.label}
+        </span>
       </div>
 
-      <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <dt className="text-slate-400">Model</dt>
-          <dd className="mt-1 text-slate-100">{device.model}</dd>
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">Battery</p>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-base font-semibold text-slate-100">
+            <BatteryMedium className="h-4 w-4 text-cyan-200" />
+            {overview.batteryPercent}%
+          </p>
         </div>
-        <div>
-          <dt className="text-slate-400">Firmware</dt>
-          <dd className="mt-1 font-mono text-slate-100">{device.firmware_version}</dd>
+        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">Signal</p>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-base font-semibold text-slate-100">
+            <Radio className="h-4 w-4 text-cyan-200" />
+            {overview.signalPercent}%
+          </p>
         </div>
-        <div className="col-span-2">
-          <dt className="text-slate-400">Battery Capacity</dt>
-          <dd className="mt-1 text-slate-100">
-            {device.battery_capacity_mAh ? `${device.battery_capacity_mAh} mAh` : 'N/A'}
-          </dd>
+        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">Linked Shipments</p>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-base font-semibold text-slate-100">
+            <StatusIcon className="h-4 w-4 text-cyan-200" />
+            {linkedShipmentCount}
+          </p>
         </div>
-      </dl>
+      </div>
 
-      <button type="button" className="btn-primary mt-6 w-full" onClick={() => onOpen(device.id)}>
-        View Shipments
-      </button>
-    </article>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button type="button" className="btn-primary px-4 py-2 text-sm" onClick={() => onOpen(device.id)}>
+          View Details
+        </button>
+
+        {onEdit && (
+          <button type="button" className="btn-secondary px-3 py-2 text-xs" onClick={() => onEdit(device)}>
+            Edit
+          </button>
+        )}
+
+        {onDelete && (
+          <button
+            type="button"
+            className="rounded-xl border border-red-300/45 bg-red-500/15 px-3 py-2 text-xs font-semibold text-red-100 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => onDelete(device)}
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+        )}
+      </div>
+    </motion.article>
   );
 }
 
 export default DeviceCard;
-

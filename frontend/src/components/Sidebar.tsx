@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { NavLink } from 'react-router-dom';
-import { Box, Compass, Layers, QrCode } from 'lucide-react';
+import { Box, BrainCircuit, Compass, FileText, Layers, QrCode } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getStatusLabel } from '@/utils/status';
 
@@ -8,6 +8,8 @@ const links = [
   { to: '/dashboard', label: 'Dashboard', icon: Compass },
   { to: '/devices', label: 'Devices', icon: Layers },
   { to: '/shipments', label: 'Shipments', icon: Box },
+  { to: '/device-logs', label: 'Device Logs', icon: FileText },
+  { to: '/intelligence', label: 'Intelligence', icon: BrainCircuit },
   { to: '/lookup', label: 'QR Lookup', icon: QrCode },
 ];
 

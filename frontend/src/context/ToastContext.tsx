@@ -7,6 +7,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 type ToastKind = 'success' | 'error' | 'info';
 
@@ -88,25 +89,31 @@ export function ToastProvider({ children }: PropsWithChildren) {
     <ToastContext.Provider value={value}>
       {children}
       <div className="pointer-events-none fixed right-4 top-4 z-[60] flex w-[min(420px,calc(100vw-2rem))] flex-col gap-2">
-        {toasts.map((toast) => (
-          <article
-            key={toast.id}
-            className={`pointer-events-auto rounded-xl border px-4 py-3 text-sm shadow-panel ${getToastClasses(toast.kind)}`}
-            role="alert"
-            aria-live="polite"
-          >
-            <div className="flex items-start gap-3">
-              <p className="flex-1">{toast.message}</p>
-              <button
-                type="button"
-                className="text-xs font-semibold uppercase tracking-wide opacity-85 hover:opacity-100"
-                onClick={() => removeToast(toast.id)}
-              >
-                Close
-              </button>
-            </div>
-          </article>
-        ))}
+        <AnimatePresence initial={false}>
+          {toasts.map((toast) => (
+            <motion.article
+              key={toast.id}
+              initial={{ opacity: 0, x: 40, scale: 0.96 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 40, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className={`pointer-events-auto rounded-xl border px-4 py-3 text-sm shadow-panel ${getToastClasses(toast.kind)}`}
+              role="alert"
+              aria-live="polite"
+            >
+              <div className="flex items-start gap-3">
+                <p className="flex-1">{toast.message}</p>
+                <button
+                  type="button"
+                  className="text-xs font-semibold uppercase tracking-wide opacity-85 hover:opacity-100"
+                  onClick={() => removeToast(toast.id)}
+                >
+                  Close
+                </button>
+              </div>
+            </motion.article>
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

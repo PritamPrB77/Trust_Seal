@@ -1,14 +1,17 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import DeviceCard from '@/components/DeviceCard';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
-import StatusBadge from '@/components/StatusBadge';
 import { createDevice, deleteDevice, updateDevice } from '@/api/devices';
 import { useAuth } from '@/hooks/useAuth';
 import { useDevices } from '@/hooks/useDevices';
+import { useShipments } from '@/hooks/useShipments';
 import { useToast } from '@/hooks/useToast';
-import type { Device, DeviceStatus } from '@/types';
+import type { Device, DeviceStatus, Shipment } from '@/types';
 import { getErrorMessage, getHttpStatus } from '@/utils/errors';
 import { hasPermission } from '@/utils/permissions';
 
@@ -36,9 +39,7 @@ function toUpdatePayload(form: DeviceFormState) {
   return {
     model: form.model.trim(),
     firmware_version: form.firmware_version.trim(),
-    battery_capacity_mAh: form.battery_capacity_mAh.trim()
-      ? Number(form.battery_capacity_mAh)
-      : null,
+    battery_capacity_mAh: form.battery_capacity_mAh.trim() ? Number(form.battery_capacity_mAh) : null,
     status: form.status,
   };
 }
@@ -50,7 +51,16 @@ function toCreatePayload(form: DeviceFormState) {
   };
 }
 
+function buildShipmentCountMap(shipments: Shipment[] | undefined): Map<string, number> {
+  return (shipments ?? []).reduce((map, shipment) => {
+    const currentCount = map.get(shipment.device_id) ?? 0;
+    map.set(shipment.device_id, currentCount + 1);
+    return map;
+  }, new Map<string, number>());
+}
+
 function DevicesPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
@@ -70,6 +80,10 @@ function DevicesPage() {
     error,
     refetch,
   } = useDevices(statusFilter === 'all' ? undefined : { status: statusFilter });
+
+  const { data: shipments } = useShipments();
+
+  const shipmentCountByDevice = useMemo(() => buildShipmentCountMap(shipments), [shipments]);
 
   const title = useMemo(
     () => (editingDevice ? `Edit Device ${editingDevice.device_uid}` : 'Add Device'),
@@ -94,8 +108,7 @@ function DevicesPage() {
       device_uid: device.device_uid,
       model: device.model,
       firmware_version: device.firmware_version,
-      battery_capacity_mAh:
-        device.battery_capacity_mAh === null ? '' : String(device.battery_capacity_mAh),
+      battery_capacity_mAh: device.battery_capacity_mAh === null ? '' : String(device.battery_capacity_mAh),
       status: device.status,
     });
     setIsFormOpen(true);
@@ -170,7 +183,9 @@ function DevicesPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-slate-100">Devices</h1>
-            <p className="mt-1 text-sm text-slate-400">Manage TrustSeal hardware assigned to shipments.</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Clean operational overview of hardware health, status and linked shipments.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <label className="text-sm text-slate-300" htmlFor="device-status-filter">
@@ -216,9 +231,7 @@ function DevicesPage() {
                 type="text"
                 className="input-field"
                 value={formState.device_uid}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, device_uid: event.target.value }))
-                }
+                onChange={(event) => setFormState((prev) => ({ ...prev, device_uid: event.target.value }))}
                 disabled={Boolean(editingDevice)}
                 required
               />
@@ -247,9 +260,7 @@ function DevicesPage() {
                 type="text"
                 className="input-field"
                 value={formState.firmware_version}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, firmware_version: event.target.value }))
-                }
+                onChange={(event) => setFormState((prev) => ({ ...prev, firmware_version: event.target.value }))}
                 required
               />
             </div>
@@ -264,9 +275,7 @@ function DevicesPage() {
                 min={0}
                 className="input-field"
                 value={formState.battery_capacity_mAh}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, battery_capacity_mAh: event.target.value }))
-                }
+                onChange={(event) => setFormState((prev) => ({ ...prev, battery_capacity_mAh: event.target.value }))}
               />
             </div>
 
@@ -278,9 +287,7 @@ function DevicesPage() {
                 id="device_status"
                 className="input-field"
                 value={formState.status}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, status: event.target.value as DeviceStatus }))
-                }
+                onChange={(event) => setFormState((prev) => ({ ...prev, status: event.target.value as DeviceStatus }))}
                 required
               >
                 <option value="active">active</option>
@@ -309,56 +316,31 @@ function DevicesPage() {
           }
         />
       ) : (
-        <section className="panel overflow-x-auto p-2">
-          <table className="min-w-full table-auto border-collapse text-left text-sm">
-            <thead className="border-b border-slate-700 text-xs uppercase tracking-[0.12em] text-slate-400">
-              <tr>
-                <th className="px-3 py-2 font-medium">Device UID</th>
-                <th className="px-3 py-2 font-medium">Model</th>
-                <th className="px-3 py-2 font-medium">Firmware</th>
-                <th className="px-3 py-2 font-medium">Battery</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                {canManageDevices && <th className="px-3 py-2 font-medium">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {devices.map((device) => (
-                <tr key={device.id} className="border-b border-slate-700/40 text-slate-200">
-                  <td className="px-3 py-3 font-medium">{device.device_uid}</td>
-                  <td className="px-3 py-3">{device.model}</td>
-                  <td className="px-3 py-3 font-mono text-xs">{device.firmware_version}</td>
-                  <td className="px-3 py-3">
-                    {device.battery_capacity_mAh === null ? 'N/A' : `${device.battery_capacity_mAh} mAh`}
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge kind="device" status={device.status} />
-                  </td>
-                  {canManageDevices && (
-                    <td className="px-3 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="btn-secondary px-3 py-1.5 text-xs"
-                          onClick={() => openEditForm(device)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-xl border border-status-red/45 bg-status-red/15 px-3 py-1.5 text-xs font-semibold text-status-red transition hover:bg-status-red/20 disabled:opacity-60"
-                          onClick={() => void handleDelete(device)}
-                          disabled={deletingDeviceId === device.id}
-                        >
-                          {deletingDeviceId === device.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+        <motion.section
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.05 },
+            },
+          }}
+          className="grid gap-4 xl:grid-cols-2"
+        >
+          {devices.map((device) => (
+            <motion.div key={device.id} variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}>
+              <DeviceCard
+                device={device}
+                linkedShipmentCount={shipmentCountByDevice.get(device.id) ?? 0}
+                onOpen={(id) => navigate(`/devices/${id}`)}
+                onEdit={canManageDevices ? openEditForm : undefined}
+                onDelete={canManageDevices ? (target) => void handleDelete(target) : undefined}
+                deleting={deletingDeviceId === device.id}
+              />
+            </motion.div>
+          ))}
+        </motion.section>
       )}
     </div>
   );

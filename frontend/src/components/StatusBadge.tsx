@@ -24,11 +24,15 @@ function StatusBadge({ kind, status }: StatusBadgeProps) {
         : getLegStatusClasses(status as LegStatus);
 
   return (
-    <span className={clsx('inline-flex rounded-full border px-2.5 py-1 text-xs font-medium', classes)}>
+    <span
+      className={clsx(
+        'status-badge inline-flex rounded-full border px-2.5 py-1 text-xs font-medium transition-all duration-300',
+        classes,
+      )}
+    >
       {getStatusLabel(status)}
     </span>
   );
 }
 
 export default StatusBadge;
-
