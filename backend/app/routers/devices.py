@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 import uuid
 
 from ..models.user import User
 from ..models.device import Device
+from ..models.shipment import Shipment
 from ..models.enums import DeviceStatus, UserRole
 from ..schemas.device import Device as DeviceSchema, DeviceCreate, DeviceUpdate
 from ..database import get_db
@@ -75,8 +77,12 @@ def update_device(
     update_data = device_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(device, field, value)
-    
-    db.commit()
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Unable to update device due to data constraints")
     db.refresh(device)
     return device
 
@@ -90,7 +96,25 @@ def delete_device(
     device = db.query(Device).filter(Device.id == device_id).first()
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
-    
+
+    assigned_shipment = (
+        db.query(Shipment.id)
+        .filter(Shipment.device_id == device_id)
+        .first()
+    )
+    if assigned_shipment:
+        raise HTTPException(
+            status_code=409,
+            detail="Device is assigned to one or more shipments. Reassign shipments before deleting the device.",
+        )
+
     db.delete(device)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Device cannot be deleted because it is referenced by other records.",
+        )
     return {"message": "Device deleted successfully"}

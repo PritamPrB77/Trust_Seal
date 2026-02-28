@@ -66,7 +66,7 @@ VITE_API_BASE_URL=http://localhost:8000
 cd backend
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirement
 ```
 2. Run migrations.
 ```bash

@@ -5,14 +5,16 @@
 @tailwind utilities;
 
 :root {
-  --bg-deep: #070f16;
-  --bg-layer: #0f1d2a;
-  --card: #162838;
-  --card-soft: #1b3144;
-  --text-main: #e7f3fa;
-  --text-muted: #90a8ba;
-  --accent: #13b59c;
+  --bg-deep: #070a16;
+  --bg-grid: rgba(255, 255, 255, 0.035);
+  --card: #0f172a;
+  --card-soft: #111b30;
+  --text-main: #eef3ff;
+  --text-muted: #9bb2d3;
+  --accent: #7c6bff;
+  --accent-strong: #5de4ff;
   --danger: #ef4444;
+  --glow: rgba(93, 228, 255, 0.28);
 }
 
 html,
@@ -24,16 +26,63 @@ body,
 body {
   margin: 0;
   color: var(--text-main);
-  background:
-    radial-gradient(circle at 10% 20%, rgba(18, 144, 127, 0.22), transparent 35%),
-    radial-gradient(circle at 85% 0%, rgba(24, 90, 171, 0.2), transparent 32%),
+  background-color: var(--bg-deep);
+  background-image:
+    radial-gradient(circle at 25% 18%, rgba(93, 228, 255, 0.16), transparent 36%),
+    radial-gradient(circle at 78% 12%, rgba(124, 107, 255, 0.16), transparent 32%),
+    radial-gradient(circle at 45% 62%, rgba(21, 244, 199, 0.1), transparent 34%),
+    repeating-linear-gradient(0deg, var(--bg-grid), var(--bg-grid) 1px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(90deg, var(--bg-grid), var(--bg-grid) 1px, transparent 1px, transparent 40px),
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.04), transparent 40%),
     var(--bg-deep);
   font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.03), transparent 40%, rgba(255, 255, 255, 0.05));
+  mix-blend-mode: screen;
+  opacity: 0.5;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+.glass {
+  backdrop-filter: blur(14px);
+  background: linear-gradient(140deg, rgba(16, 33, 51, 0.65), rgba(20, 42, 63, 0.75));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.glow-border {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 10px 45px rgba(34, 211, 238, 0.18);
+}
+
+.bg-orb {
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  filter: blur(120px);
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.38), transparent 60%);
+  opacity: 0.7;
+}
+
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, var(--bg-grid), var(--bg-grid) 1px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(90deg, var(--bg-grid), var(--bg-grid) 1px, transparent 1px, transparent 40px);
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 @layer components {
@@ -56,5 +105,12 @@ a {
   .btn-secondary {
     @apply inline-flex items-center justify-center rounded-xl border border-slate-600 bg-surface-700 px-4 py-2.5 font-semibold text-slate-100 transition hover:border-brand-400/60 hover:text-brand-300;
   }
-}
 
+  .pill {
+    @apply rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-200;
+  }
+
+  .glass-card {
+    @apply rounded-2xl border border-white/10 bg-white/5 shadow-panel backdrop-blur-xl;
+  }
+}

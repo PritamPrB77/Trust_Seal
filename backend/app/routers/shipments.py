@@ -115,7 +115,7 @@ def update_shipment(
     shipment_update: ShipmentUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+        require_roles(UserRole.ADMIN, UserRole.AUTHORITY)
     ),
 ):
     """Update a shipment"""
@@ -204,6 +204,30 @@ def get_sensor_logs(
         raise HTTPException(status_code=404, detail="Shipment not found")
     
     logs = db.query(SensorLog).filter(SensorLog.shipment_id == shipment_id).offset(skip).limit(limit).all()
+    return [_to_plain(l) for l in logs]
+
+
+@router.get("/{shipment_id}/telemetry", response_model=List[SensorLogSchema])
+def get_shipment_telemetry(
+    shipment_id: uuid.UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(1000, ge=1, le=5000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Alias endpoint for live telemetry history (backed by sensor_logs)."""
+    shipment = db.query(Shipment).filter(Shipment.id == shipment_id).first()
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    logs = (
+        db.query(SensorLog)
+        .filter(SensorLog.shipment_id == shipment_id)
+        .order_by(SensorLog.recorded_at.asc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return [_to_plain(l) for l in logs]
 
 @router.post("/{shipment_id}/settle")

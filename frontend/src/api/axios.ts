@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { clearStoredToken, getStoredToken, isTokenExpired } from '@/utils/token';
 
-const fallbackApiBase = 'http://localhost:8000';
+const fallbackApiBase = 'http://127.0.0.1:8000';
+const fallbackTimeoutMs = 120_000;
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || fallbackApiBase,
-  timeout: 20_000,
+  baseURL: String(import.meta.env.VITE_API_BASE_URL || fallbackApiBase).trim(),
+  timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || fallbackTimeoutMs),
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -37,7 +38,16 @@ apiClient.interceptors.response.use(
       clearStoredToken();
       window.dispatchEvent(new CustomEvent('trustseal:unauthorized'));
     }
+
+    if (error.response?.status === 403) {
+      const forbiddenDetail = error?.response?.data?.detail;
+      const message =
+        typeof forbiddenDetail === 'string' && forbiddenDetail.trim().length > 0
+          ? forbiddenDetail
+          : 'Insufficient permissions for this operation.';
+      window.dispatchEvent(new CustomEvent('trustseal:forbidden', { detail: message }));
+    }
+
     return Promise.reject(error);
   },
 );
-

@@ -4,8 +4,24 @@ import {
   getShipmentCustody,
   getShipmentLegs,
   getShipmentLogs,
+  getShipmentTelemetry,
+  getShipments,
   getShipmentsByDevice,
 } from '@/api/shipments';
+import type { ShipmentStatus } from '@/types';
+
+interface ShipmentListFilters {
+  status?: ShipmentStatus;
+}
+
+export function useShipments(filters?: ShipmentListFilters) {
+  const status = filters?.status;
+
+  return useQuery({
+    queryKey: ['shipments', status ?? 'all'],
+    queryFn: () => getShipments(status ? { status } : undefined),
+  });
+}
 
 export function useDeviceShipments(deviceId: string | undefined) {
   return useQuery({
@@ -27,6 +43,22 @@ export function useShipmentLogs(shipmentId: string | undefined) {
   return useQuery({
     queryKey: ['shipment', shipmentId, 'logs'],
     queryFn: () => getShipmentLogs(shipmentId as string),
+    enabled: Boolean(shipmentId),
+  });
+}
+
+interface TelemetryFilters {
+  skip?: number;
+  limit?: number;
+}
+
+export function useShipmentTelemetry(shipmentId: string | undefined, filters?: TelemetryFilters) {
+  const skip = filters?.skip ?? 0;
+  const limit = filters?.limit ?? 1000;
+
+  return useQuery({
+    queryKey: ['shipment', shipmentId, 'telemetry', skip, limit],
+    queryFn: () => getShipmentTelemetry(shipmentId as string, { skip, limit }),
     enabled: Boolean(shipmentId),
   });
 }

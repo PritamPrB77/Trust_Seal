@@ -6,6 +6,7 @@ class UserRole(str, Enum):
     WAREHOUSE = "warehouse"
     CUSTOMER = "customer"
     ADMIN = "admin"
+    AUTHORITY = "authority"
 
 class DeviceStatus(str, Enum):
     ACTIVE = "active"

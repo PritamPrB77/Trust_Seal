@@ -9,6 +9,10 @@ class SensorLogBase(BaseModel):
     shock: Optional[float] = None
     light_exposure: Optional[bool] = False
     tilt_angle: Optional[float] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    speed: Optional[float] = None
+    heading: Optional[float] = None
     hash_value: str
 
     @field_validator('shipment_id', mode='before')

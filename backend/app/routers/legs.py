@@ -145,7 +145,7 @@ def start_shipment_leg(
     leg_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE, UserRole.AUTHORITY)
     ),
 ):
     """Start a shipment leg"""
@@ -164,7 +164,7 @@ def complete_shipment_leg(
     leg_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE, UserRole.AUTHORITY)
     ),
 ):
     """Complete a shipment leg"""

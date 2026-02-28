@@ -1,11 +1,15 @@
 import { apiClient } from '@/api/axios';
 import { API_PREFIX } from '@/utils/constants';
 import type {
+  CustodyCheckpointCreatePayload,
   CustodyCheckpoint,
   SensorLog,
   Shipment,
+  ShipmentCreatePayload,
   ShipmentLeg,
+  ShipmentLegCreatePayload,
   ShipmentStatus,
+  ShipmentUpdatePayload,
   ShipmentWithDetails,
 } from '@/types';
 
@@ -30,8 +34,31 @@ export async function getShipmentById(shipmentId: string): Promise<ShipmentWithD
   return data;
 }
 
+export async function createShipment(payload: ShipmentCreatePayload): Promise<Shipment> {
+  const { data } = await apiClient.post<Shipment>(`${API_PREFIX}/shipments/`, payload);
+  return data;
+}
+
+export async function updateShipment(shipmentId: string, payload: ShipmentUpdatePayload): Promise<Shipment> {
+  const { data } = await apiClient.put<Shipment>(`${API_PREFIX}/shipments/${shipmentId}`, payload);
+  return data;
+}
+
 export async function getShipmentLogs(shipmentId: string): Promise<SensorLog[]> {
   const { data } = await apiClient.get<SensorLog[]>(`${API_PREFIX}/shipments/${shipmentId}/logs`);
+  return data;
+}
+
+interface TelemetryQueryParams {
+  skip?: number;
+  limit?: number;
+}
+
+export async function getShipmentTelemetry(
+  shipmentId: string,
+  params?: TelemetryQueryParams,
+): Promise<SensorLog[]> {
+  const { data } = await apiClient.get<SensorLog[]>(`${API_PREFIX}/shipments/${shipmentId}/telemetry`, { params });
   return data;
 }
 
@@ -46,5 +73,27 @@ export async function getShipmentCustody(shipmentId: string): Promise<CustodyChe
   const { data } = await apiClient.get<CustodyCheckpoint[]>(`${API_PREFIX}/custody/`, {
     params: { shipment_id: shipmentId },
   });
+  return data;
+}
+
+export async function createShipmentLeg(payload: ShipmentLegCreatePayload): Promise<ShipmentLeg> {
+  const { data } = await apiClient.post<ShipmentLeg>(`${API_PREFIX}/legs/`, payload);
+  return data;
+}
+
+export async function startShipmentLeg(legId: string): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>(`${API_PREFIX}/legs/${legId}/start`);
+  return data;
+}
+
+export async function completeShipmentLeg(legId: string): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>(`${API_PREFIX}/legs/${legId}/complete`);
+  return data;
+}
+
+export async function createCustodyCheckpoint(
+  payload: CustodyCheckpointCreatePayload,
+): Promise<CustodyCheckpoint> {
+  const { data } = await apiClient.post<CustodyCheckpoint>(`${API_PREFIX}/custody/`, payload);
   return data;
 }

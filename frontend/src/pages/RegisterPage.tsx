@@ -1,11 +1,13 @@
 import { FormEvent, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { BadgePlus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import type { RegisterResponse, UserRole } from '@/types';
 import { formatDateTime } from '@/utils/format';
 import { getErrorMessage } from '@/utils/errors';
 
-const roleOptions: UserRole[] = ['customer', 'factory', 'port', 'warehouse', 'admin'];
+const roleOptions: UserRole[] = ['customer', 'factory', 'port', 'warehouse', 'admin', 'authority'];
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -44,11 +46,26 @@ function RegisterPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-8">
-      <section className="panel w-full max-w-xl p-7">
-        <p className="text-xs uppercase tracking-[0.22em] text-brand-300">TrustSeal IoT</p>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-100">Create monitoring account</h1>
-        <p className="mt-2 text-sm text-slate-400">Register to access supply chain telemetry and custody data.</p>
+    <main className="relative flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="grid-overlay" />
+      <div className="bg-orb left-0 top-14" />
+      <div className="bg-orb right-10 bottom-10" />
+      <motion.section
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="glass-card glow-border w-full max-w-xl p-8"
+      >
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-400 p-3 shadow-lg shadow-cyan-400/30">
+            <BadgePlus className="h-5 w-5 text-slate-900" />
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-cyan-200">TrustSeal IoT</p>
+            <h1 className="text-2xl font-semibold text-slate-100">Create monitoring account</h1>
+            <p className="mt-1 text-sm text-slate-400">Join the secure logistics intelligence platform.</p>
+          </div>
+        </div>
 
         {errorMessage && (
           <p className="mt-4 rounded-xl border border-status-red/35 bg-status-red/10 px-3 py-2 text-sm text-status-red">
@@ -151,14 +168,13 @@ function RegisterPage() {
 
         <p className="mt-6 text-sm text-slate-400">
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-brand-300 transition hover:text-brand-400">
+          <Link to="/login" className="font-semibold text-cyan-200 transition hover:text-cyan-100">
             Login
           </Link>
         </p>
-      </section>
+      </motion.section>
     </main>
   );
 }
 
 export default RegisterPage;
-

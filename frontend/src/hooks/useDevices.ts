@@ -1,10 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { getDeviceById, getDevices } from '@/api/devices';
+import type { DeviceStatus } from '@/types';
 
-export function useDevices() {
+interface DeviceListFilters {
+  status?: DeviceStatus;
+}
+
+export function useDevices(filters?: DeviceListFilters) {
+  const status = filters?.status;
+
   return useQuery({
-    queryKey: ['devices'],
-    queryFn: () => getDevices(),
+    queryKey: ['devices', status ?? 'all'],
+    queryFn: () => getDevices(status ? { status } : undefined),
   });
 }
 
