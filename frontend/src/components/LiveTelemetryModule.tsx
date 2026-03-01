@@ -51,8 +51,10 @@ function finiteNumber(value: unknown): value is number {
 
 function buildWsUrl(shipmentId: string): string {
   const envBase = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  const fallbackHost = `${window.location.protocol}//${window.location.hostname}:8000`;
-  let apiBase = String(envBase || fallbackHost).replace(/\/+$/, '').replace(/\/api\/v1$/i, '');
+  const fallbackApiBase = import.meta.env.DEV
+    ? `${window.location.protocol}//${window.location.hostname}:8000`
+    : 'https://trust-seal-1.onrender.com';
+  let apiBase = String(envBase || fallbackApiBase).replace(/\/+$/, '').replace(/\/api\/v1$/i, '');
   apiBase = apiBase.replace('http://localhost:8000', 'http://127.0.0.1:8001');
   apiBase = apiBase.replace('http://127.0.0.1:8000', 'http://127.0.0.1:8001');
   const wsBase = apiBase.replace(/^http/i, 'ws');

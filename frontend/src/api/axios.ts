@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { clearStoredToken, getStoredToken, isTokenExpired } from '@/utils/token';
 
-const fallbackApiBase = 'http://127.0.0.1:8000';
+const prodApiBase = 'https://trust-seal-1.onrender.com';
+const fallbackApiBase = import.meta.env.DEV ? 'http://127.0.0.1:8000' : prodApiBase;
 const fallbackTimeoutMs = 120_000;
 
 export const apiClient = axios.create({
