@@ -47,7 +47,7 @@ def create_custody_checkpoint(
     checkpoint: CustodyCheckpointCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE, UserRole.AUTHORITY)
+        require_roles(UserRole.ADMIN, UserRole.CUSTOMER)
     ),
 ):
     """Create a new custody checkpoint"""
@@ -93,7 +93,7 @@ def update_custody_checkpoint(
     checkpoint_update: CustodyCheckpointUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE, UserRole.AUTHORITY)
+        require_roles(UserRole.ADMIN, UserRole.CUSTOMER)
     ),
 ):
     """Update a custody checkpoint"""

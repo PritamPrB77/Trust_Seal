@@ -79,7 +79,7 @@ def create_shipment_leg(
     leg: ShipmentLegCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+        require_roles(UserRole.FACTORY)
     ),
 ):
     """Create a new shipment leg"""
@@ -124,7 +124,7 @@ def update_shipment_leg(
     leg_update: ShipmentLegUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+        require_roles(UserRole.FACTORY)
     ),
 ):
     """Update a shipment leg"""
@@ -145,7 +145,7 @@ def start_shipment_leg(
     leg_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE, UserRole.AUTHORITY)
+        require_roles(UserRole.FACTORY)
     ),
 ):
     """Start a shipment leg"""
@@ -164,7 +164,7 @@ def complete_shipment_leg(
     leg_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE, UserRole.AUTHORITY)
+        require_roles(UserRole.FACTORY)
     ),
 ):
     """Complete a shipment leg"""
@@ -183,7 +183,7 @@ def delete_shipment_leg(
     leg_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+        require_roles(UserRole.FACTORY)
     ),
 ):
     """Delete a shipment leg"""

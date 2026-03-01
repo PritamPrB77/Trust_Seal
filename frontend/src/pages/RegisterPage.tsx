@@ -7,7 +7,7 @@ import type { RegisterResponse, UserRole } from '@/types';
 import { formatDateTime } from '@/utils/format';
 import { getErrorMessage } from '@/utils/errors';
 
-const roleOptions: UserRole[] = ['customer', 'factory', 'port', 'warehouse', 'admin', 'authority'];
+const roleOptions: UserRole[] = ['customer', 'factory', 'admin'];
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -139,7 +139,7 @@ function RegisterPage() {
             >
               {roleOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option.replace('_', ' ')}
+                  {option === 'factory' ? 'manufacturer' : option.replace('_', ' ')}
                 </option>
               ))}
             </select>

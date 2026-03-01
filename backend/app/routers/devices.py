@@ -36,7 +36,7 @@ def get_devices(
 def create_device(
     device: DeviceCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.FACTORY)),
+    current_user: User = Depends(require_roles(UserRole.FACTORY)),
 ):
     """Create a new device"""
     # Check if device_uid already exists
@@ -67,7 +67,7 @@ def update_device(
     device_id: uuid.UUID,
     device_update: DeviceUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.FACTORY)),
+    current_user: User = Depends(require_roles(UserRole.FACTORY)),
 ):
     """Update a device"""
     device = db.query(Device).filter(Device.id == device_id).first()
@@ -90,7 +90,7 @@ def update_device(
 def delete_device(
     device_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.FACTORY)),
+    current_user: User = Depends(require_roles(UserRole.FACTORY)),
 ):
     """Delete a device"""
     device = db.query(Device).filter(Device.id == device_id).first()

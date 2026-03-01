@@ -74,7 +74,7 @@ def create_shipment(
     shipment: ShipmentCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+        require_roles(UserRole.FACTORY)
     ),
 ):
     """Create a new shipment"""
@@ -115,7 +115,7 @@ def update_shipment(
     shipment_update: ShipmentUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.AUTHORITY)
+        require_roles(UserRole.FACTORY)
     ),
 ):
     """Update a shipment"""
@@ -235,7 +235,7 @@ def settle_shipment(
     shipment_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+        require_roles(UserRole.FACTORY)
     ),
 ):
     """Settle a shipment (mark as completed)"""

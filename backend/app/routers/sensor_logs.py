@@ -48,7 +48,7 @@ def create_sensor_log(
     log: SensorLogCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.ADMIN, UserRole.FACTORY, UserRole.PORT, UserRole.WAREHOUSE)
+        require_roles(UserRole.FACTORY)
     ),
 ):
     """Create a new sensor log"""

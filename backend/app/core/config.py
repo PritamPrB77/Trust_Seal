@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         "BACKEND_CORS_ORIGINS",
         "http://localhost:5173,http://127.0.0.1:5173,https://trust-seal-tawny.vercel.app",
     )
+    BACKEND_CORS_ORIGIN_REGEX: Optional[str] = os.getenv("BACKEND_CORS_ORIGIN_REGEX")
     DATABASE_URL_OVERRIDE: Optional[str] = os.getenv("DATABASE_URL")
     
     # Database

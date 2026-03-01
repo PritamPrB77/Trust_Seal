@@ -34,6 +34,8 @@ export function getLegStatusClasses(status: LegStatus): string {
 }
 
 export function getStatusLabel(value: string): string {
+  if (value === 'factory') {
+    return 'Manufacturer';
+  }
   return toTitleCase(value);
 }
-
