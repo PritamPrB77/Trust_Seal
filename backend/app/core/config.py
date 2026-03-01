@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     VERIFICATION_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("VERIFICATION_TOKEN_EXPIRE_MINUTES", "60"))
     BACKEND_CORS_ORIGINS: str = os.getenv(
         "BACKEND_CORS_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173,https://trust-seal-tawny.vercel.app/",
+        "http://localhost:5173,http://127.0.0.1:5173,https://trust-seal-tawny.vercel.app",
     )
     DATABASE_URL_OVERRIDE: Optional[str] = os.getenv("DATABASE_URL")
     
@@ -48,7 +48,8 @@ class Settings(BaseSettings):
 
     @property
     def CORS_ORIGINS(self) -> List[str]:
-        raw_origins = [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(",")]
+        # Browser Origin header never has a trailing slash. Normalize to avoid false CORS mismatches.
+        raw_origins = [origin.strip().rstrip("/") for origin in self.BACKEND_CORS_ORIGINS.split(",")]
         return [origin for origin in raw_origins if origin]
     
     class Config:
