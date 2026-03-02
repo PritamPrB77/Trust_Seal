@@ -17,10 +17,10 @@ import {
 } from '@/api/shipments';
 import { useAuth } from '@/hooks/useAuth';
 import { useDevice } from '@/hooks/useDevices';
-import { useShipment, useShipmentCustody, useShipmentLegs, useShipmentTelemetry } from '@/hooks/useShipments';
+import { useShipment, useShipmentCustody, useShipmentLegs, useShipmentSensorStats, useShipmentTelemetry } from '@/hooks/useShipments';
 import { useToast } from '@/hooks/useToast';
 import type { ShipmentStatus } from '@/types';
-import { calculateSensorStats } from '@/utils/compliance';
+import { calculateSensorStats, sensorStatsFromBackend } from '@/utils/compliance';
 import { getErrorMessage, getHttpStatus } from '@/utils/errors';
 import { formatDateTime } from '@/utils/format';
 import { hasPermission } from '@/utils/permissions';
@@ -85,6 +85,13 @@ function ShipmentDetailsPage() {
     refetch: refetchTelemetry,
   } = useShipmentTelemetry(shipmentId, { limit: 5000 });
   const {
+    data: sensorStatsSnapshot,
+    isLoading: sensorStatsLoading,
+    isError: sensorStatsError,
+    error: sensorStatsErrorObj,
+    refetch: refetchSensorStats,
+  } = useShipmentSensorStats(shipmentId);
+  const {
     data: legs,
     isLoading: legsLoading,
     isError: legsError,
@@ -119,12 +126,15 @@ function ShipmentDetailsPage() {
   );
 
   const sensorStats = useMemo(
-    () => calculateSensorStats(telemetry ?? [], shipment?.status),
-    [telemetry, shipment?.status],
+    () =>
+      sensorStatsSnapshot
+        ? sensorStatsFromBackend(sensorStatsSnapshot, shipment?.status)
+        : calculateSensorStats(telemetry ?? [], shipment?.status),
+    [sensorStatsSnapshot, telemetry, shipment?.status],
   );
 
-  const loading = shipmentLoading || telemetryLoading || legsLoading || custodyLoading || deviceLoading;
-  const hasError = shipmentError || telemetryError || legsError || custodyError;
+  const loading = shipmentLoading || telemetryLoading || sensorStatsLoading || legsLoading || custodyLoading || deviceLoading;
+  const hasError = shipmentError || telemetryError || sensorStatsError || legsError || custodyError;
 
   if (!shipmentId) {
     return <ErrorState message="Shipment ID is missing from the route." />;
@@ -139,6 +149,8 @@ function ShipmentDetailsPage() {
       ? getErrorMessage(shipmentErrorObj, 'Failed to load shipment.')
       : telemetryError
         ? getErrorMessage(telemetryErrorObj, 'Failed to load shipment telemetry logs.')
+        : sensorStatsError
+          ? getErrorMessage(sensorStatsErrorObj, 'Failed to load shipment sensor statistics.')
         : legsError
           ? getErrorMessage(legsErrorObj, 'Failed to load shipment legs.')
           : getErrorMessage(custodyErrorObj, 'Failed to load custody checkpoints.');
@@ -149,6 +161,7 @@ function ShipmentDetailsPage() {
         onRetry={() => {
           void refetchShipment();
           void refetchTelemetry();
+          void refetchSensorStats();
           void refetchLegs();
           void refetchCustody();
         }}
@@ -175,6 +188,7 @@ function ShipmentDetailsPage() {
       queryClient.invalidateQueries({ queryKey: ['shipment', shipmentId] }),
       queryClient.invalidateQueries({ queryKey: ['shipment', shipmentId, 'logs'] }),
       queryClient.invalidateQueries({ queryKey: ['shipment', shipmentId, 'telemetry'] }),
+      queryClient.invalidateQueries({ queryKey: ['shipment', shipmentId, 'sensor-stats'] }),
       queryClient.invalidateQueries({ queryKey: ['shipment', shipmentId, 'legs'] }),
       queryClient.invalidateQueries({ queryKey: ['shipment', shipmentId, 'custody'] }),
       queryClient.invalidateQueries({ queryKey: ['shipments'] }),

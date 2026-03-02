@@ -124,6 +124,19 @@ export interface SensorLog {
   recorded_at: string;
 }
 
+export interface ShipmentSensorStats {
+  shipment_id: string;
+  total_logs: number;
+  temperature_sample_count: number;
+  average_temperature: number | null;
+  min_temperature: number | null;
+  max_temperature: number | null;
+  max_shock: number | null;
+  first_recorded_at: string | null;
+  last_recorded_at: string | null;
+  has_temperature_breach: boolean;
+}
+
 export interface TelemetryUpdateEvent {
   event: 'telemetry-update';
   shipment_id: string;
@@ -175,4 +188,5 @@ export interface ChatResponse {
   answer: string;
   sources: string[];
   confidence: ChatConfidence;
+  session_id?: string | null;
 }

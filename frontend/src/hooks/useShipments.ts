@@ -4,6 +4,7 @@ import {
   getShipmentCustody,
   getShipmentLegs,
   getShipmentLogs,
+  getShipmentSensorStats,
   getShipmentTelemetry,
   getShipments,
   getShipmentsByDevice,
@@ -59,6 +60,14 @@ export function useShipmentTelemetry(shipmentId: string | undefined, filters?: T
   return useQuery({
     queryKey: ['shipment', shipmentId, 'telemetry', skip, limit],
     queryFn: () => getShipmentTelemetry(shipmentId as string, { skip, limit }),
+    enabled: Boolean(shipmentId),
+  });
+}
+
+export function useShipmentSensorStats(shipmentId: string | undefined) {
+  return useQuery({
+    queryKey: ['shipment', shipmentId, 'sensor-stats'],
+    queryFn: () => getShipmentSensorStats(shipmentId as string),
     enabled: Boolean(shipmentId),
   });
 }

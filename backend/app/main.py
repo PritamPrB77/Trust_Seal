@@ -1,7 +1,19 @@
+import asyncio
+import logging
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .services.realtime import shipment_event_dispatcher
+
+if sys.platform.startswith("win"):
+    # psycopg async pool requires selector loop on Windows.
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+from .services.chat_service import chat_service
+
+logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -26,6 +38,22 @@ async def start_realtime_dispatcher() -> None:
 async def stop_realtime_dispatcher() -> None:
     await shipment_event_dispatcher.stop()
 
+
+@app.on_event("startup")
+async def start_agentic_rag() -> None:
+    try:
+        await chat_service.startup()
+    except Exception:
+        logger.exception("Agentic RAG startup failed. API will run in degraded mode.")
+
+
+@app.on_event("shutdown")
+async def stop_agentic_rag() -> None:
+    try:
+        await chat_service.shutdown()
+    except Exception:
+        logger.exception("Agentic RAG shutdown failed.")
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -44,7 +72,10 @@ async def root():
 # Health check endpoint
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    rag = await chat_service.health_status()
+    if rag.get("status") == "ok":
+        return {"status": "ok", "rag": "ready"}
+    return {"status": rag.get("status", "degraded"), "rag": rag.get("rag", "unknown")}
 
 # Import and include routers
 from .routers import auth, devices, shipments, sensor_logs, custody, legs, ws, chat

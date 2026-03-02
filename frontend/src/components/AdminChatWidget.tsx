@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useMatch } from 'react-router-dom';
 import { sendAdminChat } from '@/api/chat';
 import { useAuth } from '@/hooks/useAuth';
+import { useShipment } from '@/hooks/useShipments';
 import type { ChatResponse } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 
@@ -20,17 +22,32 @@ const QUICK_PROMPTS = [
   'Were there any shock events yesterday?',
 ];
 
+const CHAT_SESSION_KEY = 'trustseal_admin_chat_session_id';
+
 function makeMessageId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function loadChatSessionId(): string | null {
+  if (typeof window === 'undefined') return null;
+  const value = window.localStorage.getItem(CHAT_SESSION_KEY);
+  if (!value || value.trim().length === 0) return null;
+  return value.trim();
 }
 
 function AdminChatWidget() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const shipmentRouteMatch = useMatch('/shipments/:shipmentId') ?? useMatch('/shipment/:shipmentId');
+  const deviceRouteMatch = useMatch('/devices/:deviceId') ?? useMatch('/device/:deviceId');
+  const shipmentIdFromRoute = shipmentRouteMatch?.params?.shipmentId;
+  const deviceIdFromRoute = deviceRouteMatch?.params?.deviceId;
+  const { data: shipmentFromRoute } = useShipment(shipmentIdFromRoute);
 
   const [isOpen, setIsOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [input, setInput] = useState('');
+  const [sessionId, setSessionId] = useState<string | null>(() => loadChatSessionId());
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -42,6 +59,11 @@ function AdminChatWidget() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const quickPrompts = useMemo(() => QUICK_PROMPTS, []);
+  const chatTenantId = useMemo(() => (user?.id ? `user:${user.id}` : undefined), [user?.id]);
+  const chatDeviceId = useMemo(
+    () => shipmentFromRoute?.device_id || deviceIdFromRoute || undefined,
+    [shipmentFromRoute?.device_id, deviceIdFromRoute],
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -69,7 +91,17 @@ function AdminChatWidget() {
     setIsSending(true);
 
     try {
-      const response = await sendAdminChat(trimmed);
+      const response = await sendAdminChat(trimmed, {
+        tenantId: chatTenantId,
+        deviceId: chatDeviceId,
+        sessionId: sessionId ?? undefined,
+        topK: 5,
+      });
+      if (response.session_id && response.session_id.trim().length > 0) {
+        const nextSessionId = response.session_id.trim();
+        setSessionId(nextSessionId);
+        window.localStorage.setItem(CHAT_SESSION_KEY, nextSessionId);
+      }
       setMessages((prev) => [
         ...prev,
         {

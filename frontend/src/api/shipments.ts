@@ -8,6 +8,7 @@ import type {
   ShipmentCreatePayload,
   ShipmentLeg,
   ShipmentLegCreatePayload,
+  ShipmentSensorStats,
   ShipmentStatus,
   ShipmentUpdatePayload,
   ShipmentWithDetails,
@@ -59,6 +60,11 @@ export async function getShipmentTelemetry(
   params?: TelemetryQueryParams,
 ): Promise<SensorLog[]> {
   const { data } = await apiClient.get<SensorLog[]>(`${API_PREFIX}/shipments/${shipmentId}/telemetry`, { params });
+  return data;
+}
+
+export async function getShipmentSensorStats(shipmentId: string): Promise<ShipmentSensorStats> {
+  const { data } = await apiClient.get<ShipmentSensorStats>(`${API_PREFIX}/shipments/${shipmentId}/sensor-stats`);
   return data;
 }
 

@@ -10,13 +10,15 @@ from ..models.shipment import Shipment, ShipmentLeg
 from ..models.sensor_log import SensorLog
 from ..models.enums import ShipmentStatus, LegStatus, UserRole
 from ..schemas.shipment import Shipment as ShipmentSchema, ShipmentCreate, ShipmentUpdate, ShipmentWithDetails
-from ..schemas.sensor_log import SensorLog as SensorLogSchema, SensorLogCreate
+from ..schemas.sensor_log import SensorLog as SensorLogSchema, SensorLogCreate, SensorStats as SensorStatsSchema
 from ..database import get_db
 import uuid
 from collections.abc import Iterable
 import enum as _enum
 from ..dependencies import get_current_active_user, require_roles
+from ..core.config import settings
 from ..services.realtime import build_realtime_event, shipment_event_dispatcher
+from ..services.sensor_stats_service import calculate_sensor_statistics
 
 router = APIRouter()
 
@@ -229,6 +231,35 @@ def get_shipment_telemetry(
         .all()
     )
     return [_to_plain(l) for l in logs]
+
+
+@router.get("/{shipment_id}/sensor-stats", response_model=SensorStatsSchema)
+def get_shipment_sensor_stats(
+    shipment_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    shipment = db.query(Shipment).filter(Shipment.id == shipment_id).first()
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    stats = calculate_sensor_statistics(
+        db,
+        shipment_id=str(shipment_id),
+        temperature_threshold=float(getattr(settings, "TEMPERATURE_THRESHOLD_C", 8.0)),
+    )
+    return {
+        "shipment_id": str(shipment_id),
+        "total_logs": stats["total_logs"],
+        "temperature_sample_count": stats["temperature_sample_count"],
+        "average_temperature": stats["average_temperature"],
+        "min_temperature": stats["min_temperature"],
+        "max_temperature": stats["max_temperature"],
+        "max_shock": stats["max_shock"],
+        "first_recorded_at": stats["first_recorded_at"],
+        "last_recorded_at": stats["last_recorded_at"],
+        "has_temperature_breach": stats["has_temperature_breach"],
+    }
 
 @router.post("/{shipment_id}/settle")
 def settle_shipment(

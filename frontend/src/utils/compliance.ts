@@ -1,8 +1,12 @@
-import type { SensorLog, ShipmentStatus } from '@/types';
+import type { SensorLog, ShipmentSensorStats, ShipmentStatus } from '@/types';
 import { TEMPERATURE_THRESHOLD_C } from '@/utils/constants';
 
 export interface SensorStats {
+  totalLogs: number;
+  temperatureSampleCount: number;
   averageTemperature: number | null;
+  minTemperature: number | null;
+  maxTemperature: number | null;
   maxShock: number | null;
   lastUpdate: string | null;
   hasTemperatureBreach: boolean;
@@ -34,6 +38,10 @@ export function calculateSensorStats(
     temperatureValues.length > 0
       ? temperatureValues.reduce((sum, value) => sum + value, 0) / temperatureValues.length
       : null;
+  const minTemperature =
+    temperatureValues.length > 0 ? temperatureValues.reduce((min, value) => Math.min(min, value), temperatureValues[0]) : null;
+  const maxTemperature =
+    temperatureValues.length > 0 ? temperatureValues.reduce((max, value) => Math.max(max, value), temperatureValues[0]) : null;
 
   const maxShock =
     shockValues.length > 0 ? shockValues.reduce((max, value) => Math.max(max, value), shockValues[0]) : null;
@@ -43,7 +51,11 @@ export function calculateSensorStats(
   const complianceStatus = hasTemperatureBreach || shipmentCompromised ? 'Compromised' : 'Valid';
 
   return {
+    totalLogs: sortedLogs.length,
+    temperatureSampleCount: temperatureValues.length,
     averageTemperature,
+    minTemperature,
+    maxTemperature,
     maxShock,
     lastUpdate: latest?.recorded_at ?? null,
     hasTemperatureBreach,
@@ -51,3 +63,22 @@ export function calculateSensorStats(
   };
 }
 
+export function sensorStatsFromBackend(
+  stats: ShipmentSensorStats,
+  shipmentStatus?: ShipmentStatus,
+): SensorStats {
+  const shipmentCompromised = shipmentStatus === 'compromised';
+  const complianceStatus = stats.has_temperature_breach || shipmentCompromised ? 'Compromised' : 'Valid';
+
+  return {
+    totalLogs: stats.total_logs,
+    temperatureSampleCount: stats.temperature_sample_count,
+    averageTemperature: stats.average_temperature,
+    minTemperature: stats.min_temperature,
+    maxTemperature: stats.max_temperature,
+    maxShock: stats.max_shock,
+    lastUpdate: stats.last_recorded_at,
+    hasTemperatureBreach: stats.has_temperature_breach,
+    complianceStatus,
+  };
+}
