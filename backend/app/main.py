@@ -2,8 +2,10 @@ import asyncio
 import logging
 import sys
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import OperationalError, TimeoutError as SATimeoutError
 from .core.config import settings
 from .services.realtime import shipment_event_dispatcher
 
@@ -14,6 +16,7 @@ if sys.platform.startswith("win"):
 from .services.chat_service import chat_service
 
 logger = logging.getLogger(__name__)
+LOCAL_DEV_CORS_REGEX = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
 
 # Create FastAPI app
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -41,6 +44,10 @@ async def stop_realtime_dispatcher() -> None:
 
 @app.on_event("startup")
 async def start_agentic_rag() -> None:
+    if not settings.AGENTIC_EAGER_STARTUP:
+        logger.info("Agentic RAG eager startup disabled; service will initialize on first chat request.")
+        return
+
     try:
         await chat_service.startup()
     except Exception:
@@ -55,10 +62,15 @@ async def stop_agentic_rag() -> None:
         logger.exception("Agentic RAG shutdown failed.")
 
 # CORS middleware
+combined_cors_regex = (
+    f"(?:{LOCAL_DEV_CORS_REGEX})|(?:{settings.BACKEND_CORS_ORIGIN_REGEX})"
+    if settings.BACKEND_CORS_ORIGIN_REGEX
+    else LOCAL_DEV_CORS_REGEX
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_origin_regex=settings.BACKEND_CORS_ORIGIN_REGEX,
+    allow_origin_regex=combined_cors_regex,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "Origin"],
@@ -76,6 +88,30 @@ async def health_check():
     if rag.get("status") == "ok":
         return {"status": "ok", "rag": "ready"}
     return {"status": rag.get("status", "degraded"), "rag": rag.get("rag", "unknown")}
+
+
+@app.exception_handler(OperationalError)
+async def handle_database_operational_error(_request: Request, exc: OperationalError) -> JSONResponse:
+    logger.exception("Database operational error", exc_info=exc)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database is temporarily unavailable due to connection saturation. Please retry."},
+    )
+
+
+@app.exception_handler(SATimeoutError)
+async def handle_database_pool_timeout(_request: Request, exc: SATimeoutError) -> JSONResponse:
+    logger.exception("Database connection pool timeout", exc_info=exc)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database connection pool is busy. Please retry shortly."},
+    )
+
+
+@app.exception_handler(Exception)
+async def handle_unexpected_error(_request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled application error", exc_info=exc)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 # Import and include routers
 from .routers import auth, devices, shipments, sensor_logs, custody, legs, ws, chat

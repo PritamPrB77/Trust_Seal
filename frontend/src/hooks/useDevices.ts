@@ -12,6 +12,9 @@ export function useDevices(filters?: DeviceListFilters) {
   return useQuery({
     queryKey: ['devices', status ?? 'all'],
     queryFn: () => getDevices(status ? { status } : undefined),
+    retry: 0,
+    staleTime: 3 * 60_000,
+    gcTime: 10 * 60_000,
   });
 }
 
@@ -20,6 +23,9 @@ export function useDevice(deviceId: string | undefined) {
     queryKey: ['device', deviceId],
     queryFn: () => getDeviceById(deviceId as string),
     enabled: Boolean(deviceId),
+    retry: 0,
+    staleTime: 3 * 60_000,
+    gcTime: 10 * 60_000,
   });
 }
 

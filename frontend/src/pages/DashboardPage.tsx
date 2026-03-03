@@ -47,9 +47,10 @@ function DashboardPage() {
     return <ErrorState message={message} onRetry={() => void refetch()} />;
   }
 
-  const totalDevices = devices?.length ?? 0;
-  const activeDevices = devices?.filter((device) => device.status === 'active').length ?? 0;
-  const maintenanceDevices = devices?.filter((device) => device.status === 'maintenance').length ?? 0;
+  const deviceList = devices ?? [];
+  const totalDevices = deviceList.length;
+  const activeDevices = deviceList.filter((device) => device.status === 'active').length;
+  const maintenanceDevices = deviceList.filter((device) => device.status === 'maintenance').length;
 
   return (
     <div className="space-y-6">
@@ -163,7 +164,7 @@ function DashboardPage() {
             }}
             className="grid gap-4 xl:grid-cols-2"
           >
-            {devices?.map((device) => (
+            {deviceList.map((device) => (
               <motion.div key={device.id} variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}>
                 <DeviceCard
                   device={device}

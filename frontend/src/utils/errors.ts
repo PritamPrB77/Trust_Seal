@@ -16,6 +16,10 @@ export function getErrorMessage(error: unknown, fallback = 'Something went wrong
     return 'Request timed out. Backend is slow or unreachable. Please retry.';
   }
 
+  if (axiosError?.code === 'ERR_NETWORK') {
+    return 'Unable to reach backend API. Start backend server and verify API base URL/port.';
+  }
+
   if (typeof detail === 'string' && detail.trim().length > 0) {
     return detail;
   }

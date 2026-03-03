@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     VERIFICATION_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("VERIFICATION_TOKEN_EXPIRE_MINUTES", "60"))
     BACKEND_CORS_ORIGINS: str = os.getenv(
         "BACKEND_CORS_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173,https://trust-seal-tawny.vercel.app",
+        "http://localhost:5173,http://127.0.0.1:5173,https://trust-seal-git-main-pritamprayasbehera-9760s-projects.vercel.app,https://trust-seal-tawny.vercel.app",
     )
     BACKEND_CORS_ORIGIN_REGEX: Optional[str] = os.getenv("BACKEND_CORS_ORIGIN_REGEX")
     DATABASE_URL_OVERRIDE: Optional[str] = os.getenv("DATABASE_URL")
@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "trustseal")
     POSTGRES_PORT: Optional[int] = os.getenv("POSTGRES_PORT", 5432)
     POSTGRES_SSLMODE: Optional[str] = os.getenv("POSTGRES_SSLMODE", "prefer")
+    SQLALCHEMY_POOL_SIZE: int = int(os.getenv("SQLALCHEMY_POOL_SIZE", "4"))
+    SQLALCHEMY_MAX_OVERFLOW: int = int(os.getenv("SQLALCHEMY_MAX_OVERFLOW", "2"))
+    SQLALCHEMY_POOL_TIMEOUT_SECONDS: int = int(os.getenv("SQLALCHEMY_POOL_TIMEOUT_SECONDS", "15"))
+    SQLALCHEMY_POOL_RECYCLE_SECONDS: int = int(os.getenv("SQLALCHEMY_POOL_RECYCLE_SECONDS", "1800"))
+    SQLALCHEMY_POOL_PRE_PING: bool = os.getenv("SQLALCHEMY_POOL_PRE_PING", "true").lower() == "true"
+    POSTGRES_CONNECT_TIMEOUT_SECONDS: int = int(os.getenv("POSTGRES_CONNECT_TIMEOUT_SECONDS", "5"))
     WS_REQUIRE_AUTH: bool = os.getenv("WS_REQUIRE_AUTH", "false").lower() == "true"
     REALTIME_QUEUE_MAXSIZE: int = int(os.getenv("REALTIME_QUEUE_MAXSIZE", "5000"))
 
@@ -70,8 +76,9 @@ class Settings(BaseSettings):
     AGENTIC_MAX_RESPONSE_TOKENS: int = int(os.getenv("AGENTIC_MAX_RESPONSE_TOKENS", "450"))
     AGENTIC_TEMPERATURE: float = float(os.getenv("AGENTIC_TEMPERATURE", "0.2"))
     AGENTIC_MAX_TOOL_STEPS: int = int(os.getenv("AGENTIC_MAX_TOOL_STEPS", "4"))
-    AGENTIC_POOL_MIN_SIZE: int = int(os.getenv("AGENTIC_POOL_MIN_SIZE", "2"))
-    AGENTIC_POOL_MAX_SIZE: int = int(os.getenv("AGENTIC_POOL_MAX_SIZE", "10"))
+    AGENTIC_POOL_MIN_SIZE: int = int(os.getenv("AGENTIC_POOL_MIN_SIZE", "1"))
+    AGENTIC_POOL_MAX_SIZE: int = int(os.getenv("AGENTIC_POOL_MAX_SIZE", "2"))
+    AGENTIC_EAGER_STARTUP: bool = os.getenv("AGENTIC_EAGER_STARTUP", "false").lower() == "true"
     AGENTIC_SHORT_MEMORY_WINDOW: int = int(os.getenv("AGENTIC_SHORT_MEMORY_WINDOW", "6"))
     AGENTIC_SHORT_MEMORY_TTL_MINUTES: int = int(os.getenv("AGENTIC_SHORT_MEMORY_TTL_MINUTES", "240"))
     AGENTIC_LONG_MEMORY_TOP_K: int = int(os.getenv("AGENTIC_LONG_MEMORY_TOP_K", "4"))

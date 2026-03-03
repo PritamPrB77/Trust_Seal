@@ -2,25 +2,54 @@ import axios from 'axios';
 import { clearStoredToken, getStoredToken, isTokenExpired } from '@/utils/token';
 
 const prodApiBase = 'https://trust-seal-1.onrender.com';
-const fallbackApiBase = import.meta.env.DEV ? 'http://127.0.0.1:8000' : prodApiBase;
-const fallbackTimeoutMs = 120_000;
+const fallbackApiBase = import.meta.env.DEV ? 'http://localhost:8000' : prodApiBase;
+const fallbackTimeoutMs = 20_000;
 
 export const apiClient = axios.create({
   baseURL: String(import.meta.env.VITE_API_BASE_URL || fallbackApiBase).trim(),
   timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || fallbackTimeoutMs),
 });
 
+type RetryConfig = {
+  __localPortFailoverTried?: boolean;
+  baseURL?: string;
+};
+
+function getAlternateLocalBaseURL(baseURL: string | undefined): string | null {
+  if (!import.meta.env.DEV || !baseURL) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(baseURL);
+    const isLocalHost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+    if (!isLocalHost) {
+      return null;
+    }
+
+    if (parsed.port === '8000') {
+      parsed.port = '8001';
+      return parsed.toString().replace(/\/$/, '');
+    }
+
+    if (parsed.port === '8001') {
+      parsed.port = '8000';
+      return parsed.toString().replace(/\/$/, '');
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 apiClient.interceptors.request.use((config) => {
   const token = getStoredToken();
   if (!token) {
-    // No token found — request will be sent without Authorization header
-    console.debug('[api] no token in localStorage, sending request without Authorization');
     return config;
   }
 
   if (isTokenExpired(token)) {
-    // Token expired: clear and notify app
-    console.debug('[api] token expired, clearing token and dispatching unauthorized');
     clearStoredToken();
     window.dispatchEvent(new CustomEvent('trustseal:unauthorized'));
     return config;
@@ -28,13 +57,28 @@ apiClient.interceptors.request.use((config) => {
 
   config.headers = config.headers ?? {};
   config.headers.Authorization = `Bearer ${token}`;
-  console.debug('[api] attaching Authorization header to request');
   return config;
 });
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = (error?.config || {}) as RetryConfig & Record<string, unknown>;
+    const shouldTryLocalFailover =
+      !error?.response &&
+      !config.__localPortFailoverTried &&
+      (error?.code === 'ERR_NETWORK' || error?.code === 'ECONNABORTED');
+
+    if (shouldTryLocalFailover) {
+      const currentBase = String(config.baseURL || apiClient.defaults.baseURL || '');
+      const alternateBase = getAlternateLocalBaseURL(currentBase);
+      if (alternateBase) {
+        config.__localPortFailoverTried = true;
+        config.baseURL = alternateBase;
+        return apiClient.request(config);
+      }
+    }
+
     if (error.response?.status === 401) {
       clearStoredToken();
       window.dispatchEvent(new CustomEvent('trustseal:unauthorized'));

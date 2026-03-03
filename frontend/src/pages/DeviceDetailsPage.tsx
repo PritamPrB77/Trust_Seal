@@ -37,35 +37,22 @@ function DeviceDetailsPage() {
 
   const intelligence = useMemo(() => (device ? buildDeviceIntelligence(device) : null), [device]);
   const overview = useMemo(() => (device ? buildDeviceOverview(device) : null), [device]);
-  const snapshotData = intelligence?.timeline.slice(-12) ?? [];
+  const snapshotData = intelligence?.timeline?.slice(-12) ?? [];
   const latestPoint = snapshotData[snapshotData.length - 1];
+  const shipmentList = shipments ?? [];
 
   if (!deviceId) {
     return <ErrorState message="Device ID is missing." />;
   }
 
-  if (deviceLoading || shipmentsLoading) {
-    return <LoadingState message="Loading device and shipment data..." />;
+  if (deviceLoading) {
+    return <LoadingState message="Loading device details..." />;
   }
 
-  if (deviceError || shipmentsError) {
-    const message = deviceError
-      ? deviceErrorObj instanceof Error
-        ? deviceErrorObj.message
-        : 'Failed to load device.'
-      : shipmentsErrorObj instanceof Error
-        ? shipmentsErrorObj.message
-        : 'Failed to load shipments.';
-
-    return (
-      <ErrorState
-        message={message}
-        onRetry={() => {
-          void refetchDevice();
-          void refetchShipments();
-        }}
-      />
-    );
+  if (deviceError) {
+    const message =
+      deviceErrorObj instanceof Error ? deviceErrorObj.message : 'Failed to load device.';
+    return <ErrorState message={message} onRetry={() => void refetchDevice()} />;
   }
 
   if (!device || !overview || !intelligence) {
@@ -207,14 +194,25 @@ function DeviceDetailsPage() {
           <p className="text-sm text-slate-400">Open shipment journeys tracked by this device.</p>
         </div>
 
-        {!shipments || shipments.length === 0 ? (
+        {shipmentsLoading ? (
+          <LoadingState message="Loading linked shipments..." />
+        ) : shipmentsError ? (
+          <ErrorState
+            message={
+              shipmentsErrorObj instanceof Error
+                ? shipmentsErrorObj.message
+                : 'Failed to load linked shipments.'
+            }
+            onRetry={() => void refetchShipments()}
+          />
+        ) : shipmentList.length === 0 ? (
           <EmptyState
             title="No shipments for this device"
             description="No shipment currently references this device."
           />
         ) : (
           <div className="grid gap-4">
-            {shipments.map((shipment) => (
+            {shipmentList.map((shipment) => (
               <article key={shipment.id} className="panel animate-fade-up p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

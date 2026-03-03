@@ -15,6 +15,7 @@ Usage:
 
 import sys
 import subprocess
+import os
 from pathlib import Path
 import uvicorn
 
@@ -48,10 +49,19 @@ if __name__ == "__main__":
     print("\nStarting FastAPI application...")
     print("Access the API documentation at: http://127.0.0.1:8000/docs\n")
     
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        reload_dirs=[str(project_root / "app")]  # Watch for changes in app directory
-    )
+    reload_enabled = os.getenv("TRUSTSEAL_UVICORN_RELOAD", "false").lower() == "true"
+    host = os.getenv("TRUSTSEAL_BACKEND_HOST", "0.0.0.0")
+    port = int(os.getenv("TRUSTSEAL_BACKEND_PORT", "8000"))
+
+    uvicorn_kwargs = {
+        "app": "app.main:app",
+        "host": host,
+        "port": port,
+        "reload": reload_enabled,
+    }
+    if reload_enabled:
+        # Watch for changes in app directory only in reload mode.
+        uvicorn_kwargs["reload_dirs"] = [str(project_root / "app")]
+
+    print(f"Server config: host={host}, port={port}, reload={reload_enabled}")
+    uvicorn.run(**uvicorn_kwargs)

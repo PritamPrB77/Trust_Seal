@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { useMatch } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { sendAdminChat } from '@/api/chat';
 import { useAuth } from '@/hooks/useAuth';
 import { useShipment } from '@/hooks/useShipments';
@@ -12,7 +12,10 @@ interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
-  meta?: Pick<ChatResponse, 'confidence' | 'sources'>;
+  meta?: {
+    confidence: ChatResponse['confidence'];
+    sources: string[];
+  };
 }
 
 const QUICK_PROMPTS = [
@@ -38,11 +41,16 @@ function loadChatSessionId(): string | null {
 function AdminChatWidget() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const shipmentRouteMatch = useMatch('/shipments/:shipmentId') ?? useMatch('/shipment/:shipmentId');
-  const deviceRouteMatch = useMatch('/devices/:deviceId') ?? useMatch('/device/:deviceId');
-  const shipmentIdFromRoute = shipmentRouteMatch?.params?.shipmentId;
-  const deviceIdFromRoute = deviceRouteMatch?.params?.deviceId;
-  const { data: shipmentFromRoute } = useShipment(shipmentIdFromRoute);
+  const location = useLocation();
+  const shipmentIdFromRoute = useMemo(() => {
+    const match = location.pathname.match(/^\/(?:shipments|shipment)\/([^/]+)/i);
+    return match?.[1];
+  }, [location.pathname]);
+  const deviceIdFromRoute = useMemo(() => {
+    const match = location.pathname.match(/^\/(?:devices|device)\/([^/]+)/i);
+    return match?.[1];
+  }, [location.pathname]);
+  const { data: shipmentFromRoute } = useShipment(isAdmin ? shipmentIdFromRoute : undefined);
 
   const [isOpen, setIsOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -110,7 +118,7 @@ function AdminChatWidget() {
           content: response.answer,
           meta: {
             confidence: response.confidence,
-            sources: response.sources,
+            sources: Array.isArray(response.sources) ? response.sources : [],
           },
         },
       ]);

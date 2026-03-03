@@ -4,6 +4,7 @@ import {
   getShipmentCustody,
   getShipmentLegs,
   getShipmentLogs,
+  getShipmentLogsWithParams,
   getShipmentSensorStats,
   getShipmentTelemetry,
   getShipments,
@@ -21,6 +22,9 @@ export function useShipments(filters?: ShipmentListFilters) {
   return useQuery({
     queryKey: ['shipments', status ?? 'all'],
     queryFn: () => getShipments(status ? { status } : undefined),
+    retry: 0,
+    staleTime: 2 * 60_000,
+    gcTime: 10 * 60_000,
   });
 }
 
@@ -29,6 +33,9 @@ export function useDeviceShipments(deviceId: string | undefined) {
     queryKey: ['shipments', 'device', deviceId],
     queryFn: () => getShipmentsByDevice(deviceId as string),
     enabled: Boolean(deviceId),
+    retry: 0,
+    staleTime: 2 * 60_000,
+    gcTime: 10 * 60_000,
   });
 }
 
@@ -37,6 +44,9 @@ export function useShipment(shipmentId: string | undefined) {
     queryKey: ['shipment', shipmentId],
     queryFn: () => getShipmentById(shipmentId as string),
     enabled: Boolean(shipmentId),
+    retry: 0,
+    staleTime: 2 * 60_000,
+    gcTime: 10 * 60_000,
   });
 }
 
@@ -45,6 +55,33 @@ export function useShipmentLogs(shipmentId: string | undefined) {
     queryKey: ['shipment', shipmentId, 'logs'],
     queryFn: () => getShipmentLogs(shipmentId as string),
     enabled: Boolean(shipmentId),
+    retry: 0,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+  });
+}
+
+interface QueryOptions {
+  enabled?: boolean;
+}
+
+export function useShipmentLogsWithParams(
+  shipmentId: string | undefined,
+  filters?: TelemetryFilters,
+  options?: QueryOptions,
+) {
+  const skip = filters?.skip ?? 0;
+  const limit = filters?.limit ?? 1000;
+  const enabled = options?.enabled ?? Boolean(shipmentId);
+
+  return useQuery({
+    queryKey: ['shipment', shipmentId, 'logs', skip, limit],
+    queryFn: () => getShipmentLogsWithParams(shipmentId as string, { skip, limit }),
+    enabled,
+    retry: 0,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -61,6 +98,10 @@ export function useShipmentTelemetry(shipmentId: string | undefined, filters?: T
     queryKey: ['shipment', shipmentId, 'telemetry', skip, limit],
     queryFn: () => getShipmentTelemetry(shipmentId as string, { skip, limit }),
     enabled: Boolean(shipmentId),
+    retry: 0,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -69,6 +110,10 @@ export function useShipmentSensorStats(shipmentId: string | undefined) {
     queryKey: ['shipment', shipmentId, 'sensor-stats'],
     queryFn: () => getShipmentSensorStats(shipmentId as string),
     enabled: Boolean(shipmentId),
+    retry: 0,
+    staleTime: 20_000,
+    gcTime: 5 * 60_000,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -77,6 +122,10 @@ export function useShipmentLegs(shipmentId: string | undefined) {
     queryKey: ['shipment', shipmentId, 'legs'],
     queryFn: () => getShipmentLegs(shipmentId as string),
     enabled: Boolean(shipmentId),
+    retry: 0,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -85,6 +134,10 @@ export function useShipmentCustody(shipmentId: string | undefined) {
     queryKey: ['shipment', shipmentId, 'custody'],
     queryFn: () => getShipmentCustody(shipmentId as string),
     enabled: Boolean(shipmentId),
+    retry: 0,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    placeholderData: (previousData) => previousData,
   });
 }
 

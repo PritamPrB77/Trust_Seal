@@ -21,6 +21,25 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 8_000;
+
+function getCurrentUserWithTimeout(timeoutMs: number): Promise<User> {
+  return new Promise((resolve, reject) => {
+    const timeoutHandle = window.setTimeout(() => {
+      reject(new Error('Auth bootstrap timed out.'));
+    }, timeoutMs);
+
+    getCurrentUser()
+      .then((currentUser) => {
+        window.clearTimeout(timeoutHandle);
+        resolve(currentUser);
+      })
+      .catch((error) => {
+        window.clearTimeout(timeoutHandle);
+        reject(error);
+      });
+  });
+}
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
@@ -43,7 +62,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     setToken(existingToken);
     try {
-      const currentUser = await getCurrentUser();
+      const currentUser = await getCurrentUserWithTimeout(AUTH_BOOTSTRAP_TIMEOUT_MS);
       setUser(currentUser);
     } catch {
       logout();

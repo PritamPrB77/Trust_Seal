@@ -17,7 +17,13 @@ import {
 } from '@/api/shipments';
 import { useAuth } from '@/hooks/useAuth';
 import { useDevice } from '@/hooks/useDevices';
-import { useShipment, useShipmentCustody, useShipmentLegs, useShipmentSensorStats, useShipmentTelemetry } from '@/hooks/useShipments';
+import {
+  useShipment,
+  useShipmentCustody,
+  useShipmentLegs,
+  useShipmentSensorStats,
+  useShipmentTelemetry,
+} from '@/hooks/useShipments';
 import { useToast } from '@/hooks/useToast';
 import type { ShipmentStatus } from '@/types';
 import { calculateSensorStats, sensorStatsFromBackend } from '@/utils/compliance';
@@ -82,33 +88,26 @@ function ShipmentDetailsPage() {
     isLoading: telemetryLoading,
     isError: telemetryError,
     error: telemetryErrorObj,
-    refetch: refetchTelemetry,
-  } = useShipmentTelemetry(shipmentId, { limit: 5000 });
+  } = useShipmentTelemetry(shipment?.id, { limit: 500 });
   const {
     data: sensorStatsSnapshot,
     isLoading: sensorStatsLoading,
     isError: sensorStatsError,
     error: sensorStatsErrorObj,
-    refetch: refetchSensorStats,
-  } = useShipmentSensorStats(shipmentId);
+  } = useShipmentSensorStats(shipment?.id);
   const {
     data: legs,
-    isLoading: legsLoading,
     isError: legsError,
     error: legsErrorObj,
-    refetch: refetchLegs,
-  } = useShipmentLegs(shipmentId);
+  } = useShipmentLegs(shipment?.id);
   const {
     data: custody,
-    isLoading: custodyLoading,
     isError: custodyError,
     error: custodyErrorObj,
-    refetch: refetchCustody,
-  } = useShipmentCustody(shipmentId);
+  } = useShipmentCustody(shipment?.id);
 
   const {
     data: attachedDevice,
-    isLoading: deviceLoading,
     isError: deviceError,
   } = useDevice(shipment?.device_id);
 
@@ -132,38 +131,23 @@ function ShipmentDetailsPage() {
         : calculateSensorStats(telemetry ?? [], shipment?.status),
     [sensorStatsSnapshot, telemetry, shipment?.status],
   );
-
-  const loading = shipmentLoading || telemetryLoading || sensorStatsLoading || legsLoading || custodyLoading || deviceLoading;
-  const hasError = shipmentError || telemetryError || sensorStatsError || legsError || custodyError;
+  const telemetryRecords = useMemo(() => telemetry ?? [], [telemetry]);
 
   if (!shipmentId) {
     return <ErrorState message="Shipment ID is missing from the route." />;
   }
 
-  if (loading) {
+  if (shipmentLoading) {
     return <LoadingState message="Loading shipment operations..." />;
   }
 
-  if (hasError) {
-    const message = shipmentError
-      ? getErrorMessage(shipmentErrorObj, 'Failed to load shipment.')
-      : telemetryError
-        ? getErrorMessage(telemetryErrorObj, 'Failed to load shipment telemetry logs.')
-        : sensorStatsError
-          ? getErrorMessage(sensorStatsErrorObj, 'Failed to load shipment sensor statistics.')
-        : legsError
-          ? getErrorMessage(legsErrorObj, 'Failed to load shipment legs.')
-          : getErrorMessage(custodyErrorObj, 'Failed to load custody checkpoints.');
-
+  if (shipmentError) {
+    const message = getErrorMessage(shipmentErrorObj, 'Failed to load shipment.');
     return (
       <ErrorState
         message={message}
         onRetry={() => {
           void refetchShipment();
-          void refetchTelemetry();
-          void refetchSensorStats();
-          void refetchLegs();
-          void refetchCustody();
         }}
       />
     );
@@ -386,11 +370,22 @@ function ShipmentDetailsPage() {
       </section>
 
       <section className="space-y-4">
+        {(telemetryLoading || sensorStatsLoading || telemetryError || sensorStatsError) && (
+          <div className="rounded-xl border border-slate-700 bg-surface-800/70 px-3 py-2 text-sm text-slate-300">
+            {telemetryLoading || sensorStatsLoading
+              ? 'Telemetry data is still loading...'
+              : `Telemetry is temporarily unavailable: ${
+                  telemetryError
+                    ? getErrorMessage(telemetryErrorObj, 'Failed to load shipment telemetry logs.')
+                    : getErrorMessage(sensorStatsErrorObj, 'Failed to load shipment sensor statistics.')
+                }`}
+          </div>
+        )}
         <SensorStatsStrip stats={sensorStats} />
         <ComplianceCard stats={sensorStats} />
         <LiveTelemetryModule
           shipmentId={shipment.id}
-          initialTelemetry={telemetry ?? []}
+          initialTelemetry={telemetryRecords}
           legs={sortedLegs}
           origin={shipment.origin}
           destination={shipment.destination}
@@ -471,7 +466,11 @@ function ShipmentDetailsPage() {
           </form>
         )}
 
-        {sortedLegs.length === 0 ? (
+        {legsError ? (
+          <p className="rounded-xl border border-slate-700 bg-surface-800/70 px-3 py-2 text-sm text-slate-400">
+            {getErrorMessage(legsErrorObj, 'Shipment legs could not be loaded right now.')}
+          </p>
+        ) : sortedLegs.length === 0 ? (
           <p className="rounded-xl border border-slate-700 bg-surface-800/70 px-3 py-2 text-sm text-slate-400">
             No legs defined for this shipment.
           </p>
@@ -617,7 +616,11 @@ function ShipmentDetailsPage() {
           </form>
         )}
 
-        {sortedCustody.length === 0 ? (
+        {custodyError ? (
+          <p className="rounded-xl border border-slate-700 bg-surface-800/70 px-3 py-2 text-sm text-slate-400">
+            {getErrorMessage(custodyErrorObj, 'Custody checkpoints could not be loaded right now.')}
+          </p>
+        ) : sortedCustody.length === 0 ? (
           <p className="rounded-xl border border-slate-700 bg-surface-800/70 px-3 py-2 text-sm text-slate-400">
             No custody checkpoints recorded for this shipment.
           </p>

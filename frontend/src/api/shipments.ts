@@ -50,6 +50,14 @@ export async function getShipmentLogs(shipmentId: string): Promise<SensorLog[]> 
   return data;
 }
 
+export async function getShipmentLogsWithParams(
+  shipmentId: string,
+  params?: { skip?: number; limit?: number },
+): Promise<SensorLog[]> {
+  const { data } = await apiClient.get<SensorLog[]>(`${API_PREFIX}/shipments/${shipmentId}/logs`, { params });
+  return data;
+}
+
 interface TelemetryQueryParams {
   skip?: number;
   limit?: number;
@@ -59,8 +67,19 @@ export async function getShipmentTelemetry(
   shipmentId: string,
   params?: TelemetryQueryParams,
 ): Promise<SensorLog[]> {
-  const { data } = await apiClient.get<SensorLog[]>(`${API_PREFIX}/shipments/${shipmentId}/telemetry`, { params });
-  return data;
+  try {
+    const { data } = await apiClient.get<SensorLog[]>(
+      `${API_PREFIX}/shipments/${shipmentId}/telemetry`,
+      { params, timeout: 8_000 },
+    );
+    return data;
+  } catch {
+    const { data } = await apiClient.get<SensorLog[]>(`${API_PREFIX}/shipments/${shipmentId}/logs`, {
+      params,
+      timeout: 8_000,
+    });
+    return data;
+  }
 }
 
 export async function getShipmentSensorStats(shipmentId: string): Promise<ShipmentSensorStats> {

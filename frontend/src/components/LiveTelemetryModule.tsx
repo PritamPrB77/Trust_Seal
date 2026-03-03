@@ -14,7 +14,9 @@ import { getStoredToken } from '@/utils/token';
 type RealtimeStatus = 'connecting' | 'live' | 'reconnecting' | 'offline';
 type RangeMode = '10m' | '1h' | 'full';
 
-const MAP_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const MAP_STYLE_URL = String(
+  import.meta.env.VITE_MAP_STYLE_URL || 'https://demotiles.maplibre.org/style.json',
+);
 const MAX_POINTS = 2000;
 const RANGE_MS = { '10m': 10 * 60 * 1000, '1h': 60 * 60 * 1000 } as const;
 
@@ -50,13 +52,12 @@ function finiteNumber(value: unknown): value is number {
 }
 
 function buildWsUrl(shipmentId: string): string {
+  const envWsBase = import.meta.env.VITE_WS_BASE_URL as string | undefined;
   const envBase = import.meta.env.VITE_API_BASE_URL as string | undefined;
   const fallbackApiBase = import.meta.env.DEV
     ? `${window.location.protocol}//${window.location.hostname}:8000`
     : 'https://trust-seal-1.onrender.com';
-  let apiBase = String(envBase || fallbackApiBase).replace(/\/+$/, '').replace(/\/api\/v1$/i, '');
-  apiBase = apiBase.replace('http://localhost:8000', 'http://127.0.0.1:8001');
-  apiBase = apiBase.replace('http://127.0.0.1:8000', 'http://127.0.0.1:8001');
+  const apiBase = String(envWsBase || envBase || fallbackApiBase).replace(/\/+$/, '').replace(/\/api\/v1$/i, '');
   const wsBase = apiBase.replace(/^http/i, 'ws');
   const tokenEnabled = String(import.meta.env.VITE_WS_SEND_TOKEN || 'false').toLowerCase() === 'true';
   const token = tokenEnabled ? getStoredToken() : null;
@@ -70,7 +71,14 @@ function metricOption(title: string, unit: string, color: string, data: Array<[s
     grid: { left: 42, right: 24, top: 36, bottom: 48 },
     tooltip: { trigger: 'axis', valueFormatter: (v) => `${formatNumber(Number(v))} ${unit}` },
     xAxis: { type: 'time', axisLabel: { color: '#94a3b8' }, splitLine: { show: false } },
-    yAxis: { type: 'value', scale: true, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#334155' } } },
+    yAxis: {
+      type: 'value',
+      name: unit,
+      scale: true,
+      nameTextStyle: { color: '#94a3b8', padding: [0, 0, 0, 8] },
+      axisLabel: { color: '#94a3b8' },
+      splitLine: { lineStyle: { color: '#334155' } },
+    },
     dataZoom: [{ type: 'inside' }, { type: 'slider', height: 14, bottom: 8 }],
     series: [{ name: title, type: 'line', smooth: true, showSymbol: false, lineStyle: { width: 2.2, color }, areaStyle: { color: `${color}22` }, data }],
   };
@@ -99,10 +107,16 @@ function LiveTelemetryModule({
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptRef = useRef(0);
   const didInitialFitRef = useRef(false);
+  const telemetryWsEnabled = String(import.meta.env.VITE_TELEMETRY_WS_ENABLED || 'false').toLowerCase() === 'true';
 
   useEffect(() => setTelemetry([...initialTelemetry].slice(-maxPoints)), [initialTelemetry, maxPoints]);
 
   useEffect(() => {
+    if (!telemetryWsEnabled) {
+      setRealtimeStatus('offline');
+      return;
+    }
+
     let unmounted = false;
     const clearReconnect = () => {
       if (reconnectTimerRef.current !== null) {
@@ -195,9 +209,10 @@ function LiveTelemetryModule({
       clearReconnect();
       if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) wsRef.current.close();
     };
-  }, [shipmentId, maxPoints]);
+  }, [shipmentId, maxPoints, telemetryWsEnabled]);
 
   const routePoints = useMemo(() => telemetry.filter((x) => finiteNumber(x.latitude) && finiteNumber(x.longitude)), [telemetry]);
+  const hasTelemetryRecords = telemetry.length > 0;
   const latest = routePoints.at(-1) ?? null;
   const start = routePoints[0] ?? null;
   const startOverlapsCurrent = !!start && !!latest && Math.abs((start.latitude as number) - (latest.latitude as number)) < 1e-5 && Math.abs((start.longitude as number) - (latest.longitude as number)) < 1e-5;
@@ -267,6 +282,13 @@ function LiveTelemetryModule({
   const humData = windowed.filter((x) => finiteNumber(x.humidity)).map((x) => [x.recorded_at, x.humidity as number] as [string, number]);
   const shockData = windowed.filter((x) => finiteNumber(x.shock)).map((x) => [x.recorded_at, x.shock as number] as [string, number]);
   const tiltData = windowed.filter((x) => finiteNumber(x.tilt_angle)).map((x) => [x.recorded_at, x.tilt_angle as number] as [string, number]);
+  const hasAnyMetricSamples = tempData.length > 0 || humData.length > 0 || shockData.length > 0 || tiltData.length > 0;
+  const metricCards = [
+    { key: 'temperature', label: 'Temperature', unit: 'C', color: '#f97316', data: tempData },
+    { key: 'humidity', label: 'Humidity', unit: '%', color: '#38bdf8', data: humData },
+    { key: 'shock', label: 'Shock', unit: 'g', color: '#f43f5e', data: shockData },
+    { key: 'tilt', label: 'Tilt Angle', unit: 'deg', color: '#facc15', data: tiltData },
+  ] as const;
 
   return (
     <section className="space-y-5">
@@ -289,7 +311,7 @@ function LiveTelemetryModule({
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1"><Zap className="h-3.5 w-3.5 text-cyan-200" /><span className="font-semibold text-slate-100">Active</span><span className="text-slate-400">AI monitor</span></span>
         </div>
         {!routePoints.length ? (
-          <div className="rounded-xl border border-slate-700/70 bg-surface-800/60 px-4 py-5 text-sm text-slate-400"><div className="flex items-center gap-3"><span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-brand-300" /><span>{realtimeStatus === 'live' ? 'Waiting for live tracking data...' : 'Connecting to telemetry stream...'}</span></div></div>
+          <div className="rounded-xl border border-slate-700/70 bg-surface-800/60 px-4 py-5 text-sm text-slate-400"><div className="flex items-center gap-3"><span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-brand-300" /><span>{hasTelemetryRecords ? 'Telemetry found, but no GPS coordinates are present for map plotting.' : realtimeStatus === 'live' ? 'Waiting for live tracking data...' : 'Connecting to telemetry stream...'}</span></div></div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
             <div className="relative h-[460px] overflow-hidden rounded-xl border border-slate-700/70">
@@ -310,8 +332,8 @@ function LiveTelemetryModule({
                 <div className="flex items-center justify-between"><span className="text-slate-400">Current leg</span><span className="font-semibold">{(legs.find((x) => x.status === 'in_progress') || legs.at(-1)) ? `Leg ${(legs.find((x) => x.status === 'in_progress') || legs.at(-1))?.leg_number}` : 'N/A'}</span></div>
                 <div className="flex items-center justify-between"><span className="text-slate-400">Shipment status</span><span className="font-semibold">{status ?? 'N/A'}</span></div>
                 <div className="flex items-center justify-between"><span className="text-slate-400">Last update</span><span className="font-semibold">{latest ? formatDateTime(latest.recorded_at) : 'Awaiting data'}</span></div>
-                <div className="rounded-lg border border-slate-700/70 bg-surface-900/80 p-3 text-xs text-slate-300"><p className="font-semibold text-slate-100">Origin → Destination</p><p className="mt-1">{origin || 'Unknown'} → {destination || 'Unknown'}</p></div>
-                {!!legs.length && <div className="space-y-2 text-xs text-slate-300"><p className="font-semibold text-slate-100">Shipment legs</p><div className="flex flex-wrap gap-2">{legs.map((leg) => <span key={leg.id} className={clsx('rounded-full px-3 py-1', leg.status === 'settled' ? 'bg-emerald-400/20 text-emerald-100' : leg.status === 'in_progress' ? 'bg-sky-400/20 text-sky-100' : 'bg-slate-500/20 text-slate-200')}>Leg {leg.leg_number}: {leg.from_location} → {leg.to_location}</span>)}</div></div>}
+                <div className="rounded-lg border border-slate-700/70 bg-surface-900/80 p-3 text-xs text-slate-300"><p className="font-semibold text-slate-100">Origin to Destination</p><p className="mt-1">{origin || 'Unknown'} to {destination || 'Unknown'}</p></div>
+                {!!legs.length && <div className="space-y-2 text-xs text-slate-300"><p className="font-semibold text-slate-100">Shipment legs</p><div className="flex flex-wrap gap-2">{legs.map((leg) => <span key={leg.id} className={clsx('rounded-full px-3 py-1', leg.status === 'settled' ? 'bg-emerald-400/20 text-emerald-100' : leg.status === 'in_progress' ? 'bg-sky-400/20 text-sky-100' : 'bg-slate-500/20 text-slate-200')}>Leg {leg.leg_number}: {leg.from_location} to {leg.to_location}</span>)}</div></div>}
               </div>
             </div>
           </div>
@@ -322,10 +344,12 @@ function LiveTelemetryModule({
           <div><h3 className="text-lg font-semibold text-slate-100">Telemetry Graphs</h3><p className="mt-1 text-sm text-slate-400">Live temperature, humidity, shock and tilt metrics.</p></div>
           <div className="flex flex-wrap gap-2">{(['10m', '1h', 'full'] as const).map((mode) => <button key={mode} type="button" className={mode === rangeMode ? 'btn-primary px-3 py-1.5 text-xs' : 'btn-secondary px-3 py-1.5 text-xs'} onClick={() => setRangeMode(mode)}>{mode === '10m' ? 'Last 10 min' : mode === '1h' ? 'Last 1 hour' : 'Full Journey'}</button>)}</div>
         </div>
-        {!windowed.length ? <p className="rounded-xl border border-slate-700 bg-surface-800/70 px-3 py-2 text-sm text-slate-400">No telemetry records available for selected range.</p> : <div className="grid gap-4 xl:grid-cols-2"><div className="panel-soft p-3"><ReactECharts option={metricOption('Temperature', 'C', '#f97316', tempData)} style={{ height: 280 }} notMerge lazyUpdate /></div><div className="panel-soft p-3"><ReactECharts option={metricOption('Humidity', '%', '#38bdf8', humData)} style={{ height: 280 }} notMerge lazyUpdate /></div><div className="panel-soft p-3"><ReactECharts option={metricOption('Shock', 'g', '#f43f5e', shockData)} style={{ height: 280 }} notMerge lazyUpdate /></div><div className="panel-soft p-3"><ReactECharts option={metricOption('Tilt Angle', 'deg', '#facc15', tiltData)} style={{ height: 280 }} notMerge lazyUpdate /></div></div>}
+        {!windowed.length ? <p className="rounded-xl border border-slate-700 bg-surface-800/70 px-3 py-2 text-sm text-slate-400">No telemetry records available for selected range.</p> : !hasAnyMetricSamples ? <p className="rounded-xl border border-slate-700 bg-surface-800/70 px-3 py-2 text-sm text-slate-400">Telemetry rows are available, but numeric metric values are missing for the selected range.</p> : <div className="grid gap-4 xl:grid-cols-2">{metricCards.map((metric) => <div key={metric.key} className="panel-soft p-3"><div className="mb-2 flex items-center justify-between gap-2"><p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-300"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: metric.color }} />{metric.label}</p><span className="text-xs text-slate-400">{metric.data.length > 0 ? `Current: ${formatNumber(metric.data[metric.data.length - 1][1])} ${metric.unit}` : `No ${metric.label.toLowerCase()} data`}</span></div><ReactECharts option={metricOption(metric.label, metric.unit, metric.color, metric.data)} style={{ height: 280 }} notMerge lazyUpdate /></div>)}</div>}
       </article>
     </section>
   );
 }
 
 export default LiveTelemetryModule;
+
+
